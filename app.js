@@ -129,6 +129,7 @@ const reportStudentPicker = document.querySelector("#reportStudentPicker");
 const reportDateInput = document.querySelector("#reportDateInput");
 const reportPreview = document.querySelector("#reportPreview");
 const reportStatus = document.querySelector("#reportStatus");
+const importDataInput = document.querySelector("#importDataInput");
 const toast = document.querySelector("#toast");
 
 function createStudent(overrides = {}) {
@@ -1029,6 +1030,37 @@ function updateInactiveStudent(studentId, field, value) {
   renderInactiveSummary();
 }
 
+function exportData() {
+  saveState(false);
+  const blob = new Blob([JSON.stringify(state, null, 2)], { type: "application/json" });
+  const link = document.createElement("a");
+  link.href = URL.createObjectURL(blob);
+  link.download = `TNC-관리데이터-${new Date().toISOString().slice(0, 10)}.json`;
+  link.click();
+  URL.revokeObjectURL(link.href);
+  showToast("데이터 백업 파일을 저장했습니다.");
+}
+
+function importData(file) {
+  if (!file) return;
+  const reader = new FileReader();
+  reader.addEventListener("load", () => {
+    try {
+      const imported = safeParse(String(reader.result));
+      if (!imported) throw new Error("invalid");
+      state = normalizeState(imported);
+      saveState(false);
+      render();
+      showToast("데이터를 불러왔습니다.");
+    } catch {
+      showToast("불러올 수 없는 파일입니다.");
+    } finally {
+      importDataInput.value = "";
+    }
+  });
+  reader.readAsText(file);
+}
+
 function reportTemplateLabel(value) {
   return {
     growth: "성장 스토리",
@@ -1289,6 +1321,9 @@ document.querySelector("#deleteClassBtn").addEventListener("click", () => {
 
 document.querySelector("#addStudentBtn").addEventListener("click", addStudent);
 document.querySelector("#addStudentInClassBtn").addEventListener("click", addStudent);
+document.querySelector("#exportDataBtn").addEventListener("click", exportData);
+document.querySelector("#importDataBtn").addEventListener("click", () => importDataInput.click());
+importDataInput.addEventListener("change", (event) => importData(event.target.files[0]));
 
 document.querySelector("#deleteSelectedBtn").addEventListener("click", () => {
   if (state.selectedStudentId) deleteStudent(state.selectedStudentId);
