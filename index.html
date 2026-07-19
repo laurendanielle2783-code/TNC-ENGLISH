@@ -1,0 +1,756 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>TNC 영어학원 관리 대시보드</title>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <div class="app-shell">
+      <aside class="sidebar">
+        <div class="brand">
+          <img src="assets/tnc-logo-cropped.png" alt="TNC 영어학원" />
+          <div>
+            <strong>TNC 영어학원</strong>
+            <span>관리 대시보드</span>
+          </div>
+        </div>
+
+        <nav class="nav-list" aria-label="주요 메뉴">
+          <button class="nav-item active" type="button" data-page="todayPage">정규 수업</button>
+          <button class="nav-item" type="button" data-page="wednesdayPage">수요일 개별</button>
+          <button class="nav-item" type="button" data-page="calendarPage">달력 기록</button>
+          <button class="nav-item" type="button" data-page="studentPage">학생별 관리</button>
+          <button class="nav-item" type="button" data-page="inactivePage">휴/퇴원생 관리</button>
+          <button class="nav-item" type="button" data-page="classPage">반별 관리</button>
+        </nav>
+
+        <div class="side-panel">
+          <span class="panel-label">오늘 알림</span>
+          <strong id="sideAlertCount">0건 확인 필요</strong>
+          <p>결석, 과제 미완, 단어 미완료, 수요일 개별 체크 누락, 상담 필요 학생을 모아 보여줍니다.</p>
+        </div>
+      </aside>
+
+      <main class="dashboard">
+        <header class="topbar">
+          <div>
+            <p class="eyebrow" id="todayText">오늘</p>
+            <h1 id="pageTitle">정규 수업 관리</h1>
+          </div>
+          <div class="top-actions">
+            <label>
+              반 선택
+              <select id="classFilter"></select>
+            </label>
+            <label>
+              기록 날짜
+              <input type="date" id="recordDateInput" />
+            </label>
+            <button class="outline-btn" type="button" id="addClassBtn">반 추가등록</button>
+            <button class="outline-btn" type="button" id="addStudentBtn">학생추가등록</button>
+            <button class="primary-btn" type="button" id="saveBtn">저장</button>
+          </div>
+        </header>
+
+        <section class="page active" id="todayPage">
+          <section class="main-panel">
+            <div class="section-head compact">
+              <div>
+                <p class="eyebrow">선택 반 정보</p>
+                <h2>반명 / 교재 / 수업 정보 수정</h2>
+              </div>
+            </div>
+            <div class="class-form">
+              <label>
+                반 이름
+                <input type="text" data-class-field="name" />
+              </label>
+              <label>
+                수업 요일
+                <select data-class-field="classDays">
+                  <option>월목</option>
+                  <option>화금</option>
+                  <option>월금</option>
+                  <option>화목</option>
+                </select>
+              </label>
+              <label>
+                수업 시간
+                <input type="text" data-class-field="time" />
+              </label>
+              <label>
+                담당 선생님
+                <input type="text" data-class-field="teacher" />
+              </label>
+              <label>
+                교재
+                <input type="text" data-class-field="book" />
+              </label>
+              <label>
+                레벨 / 설명
+                <input type="text" data-class-field="level" />
+              </label>
+            </div>
+          </section>
+
+          <section class="class-hero">
+            <div class="class-title">
+              <img src="assets/tnc-logo-cropped.png" alt="" />
+              <div>
+                <span id="heroClassName">포산중2</span>
+                <h2 id="heroClassTime">월목 7:00-9:00 정규 수업</h2>
+              </div>
+            </div>
+            <div class="class-meta">
+              <span id="heroTeacher">담당: 은하</span>
+              <span id="heroBook">교재: Reading Expert 2</span>
+              <span id="heroFlow">월: 문법 / 목: 독해</span>
+            </div>
+          </section>
+
+          <section class="summary-grid" aria-label="오늘 요약">
+            <article class="summary-card">
+              <span>등록 학생</span>
+              <strong id="totalStudents">0명</strong>
+              <small>현재 반 인원</small>
+            </article>
+            <article class="summary-card accent-green">
+              <span>출석 완료</span>
+              <strong id="attendanceCount">0명</strong>
+              <small>지각 포함</small>
+            </article>
+            <article class="summary-card accent-orange">
+              <span>단어 확인</span>
+              <strong id="wordDoneCount">0명</strong>
+              <small>매 수업 체크</small>
+            </article>
+            <article class="summary-card accent-red">
+              <span>연락 필요</span>
+              <strong id="contactNeeded">0명</strong>
+              <small>학부모 확인 권장</small>
+            </article>
+          </section>
+
+          <section class="bottom-grid">
+            <article class="main-panel">
+              <div class="section-head compact">
+                <div>
+                  <p class="eyebrow">반 공통 진도</p>
+                  <h2>문법 / 독해 진도</h2>
+                </div>
+              </div>
+              <div class="progress-list two-col">
+                <label>
+                  문법 진도
+                  <input type="text" data-class-field="grammarProgress" />
+                </label>
+                <label>
+                  독해 진도
+                  <input type="text" data-class-field="readingProgress" />
+                </label>
+                <label>
+                  다음 과제
+                  <input type="text" data-class-field="nextHomework" />
+                </label>
+                <label>
+                  오늘 과제
+                  <input type="text" data-class-field="todayHomework" />
+                </label>
+              </div>
+            </article>
+
+            <article class="main-panel">
+              <div class="section-head compact">
+                <div>
+                  <p class="eyebrow">요일 패턴</p>
+                  <h2>출석 조합 한눈에 보기</h2>
+                </div>
+              </div>
+              <div class="pattern-grid" id="patternSummary"></div>
+            </article>
+          </section>
+
+          <section class="workspace-grid wide-main">
+            <div class="main-panel">
+              <div class="section-head">
+                <div>
+                  <p class="eyebrow">정규 수업 체크</p>
+                  <h2>학생별 단어 / 출석 / 과제</h2>
+                </div>
+                <div class="quick-actions">
+                  <button type="button" data-bulk="attendance">전체 출석</button>
+                  <button type="button" data-bulk="homework">전체 과제완료</button>
+                </div>
+              </div>
+
+              <div class="table-wrap">
+                <table class="lesson-table">
+                  <thead>
+                    <tr>
+                      <th>이름</th>
+                      <th>학교</th>
+                      <th>학년</th>
+                      <th>등원 요일</th>
+                      <th>출석</th>
+                      <th>과제</th>
+                      <th>단어 Day</th>
+                      <th>단어 완료</th>
+                      <th>비고</th>
+                    </tr>
+                  </thead>
+                  <tbody id="studentRows"></tbody>
+                </table>
+              </div>
+            </div>
+
+            <aside class="detail-panel">
+              <div class="section-head compact">
+                <div>
+                  <p class="eyebrow">선택 학생 빠른 수정</p>
+                  <h2 id="detailName">학생 선택</h2>
+                </div>
+                <span class="status-pill" id="detailStatus">대기</span>
+              </div>
+
+              <div class="detail-form" id="detailForm">
+                <div class="readonly-card">
+                  <span>소속 반</span>
+                  <strong id="detailClassName">-</strong>
+                </div>
+                <div class="readonly-card">
+                  <span>학교 / 학년</span>
+                  <strong id="detailSchoolGrade">-</strong>
+                </div>
+                <div class="readonly-card">
+                  <span>등원 요일</span>
+                  <strong id="detailSchedule">-</strong>
+                </div>
+                <div class="readonly-card">
+                  <span>학부모 연락처</span>
+                  <strong id="detailParentPhone">-</strong>
+                </div>
+              </div>
+
+              <button class="outline-btn danger" type="button" id="deleteSelectedBtn">휴/퇴원생으로 이동</button>
+            </aside>
+          </section>
+
+          <section class="main-panel">
+            <div class="section-head compact">
+              <div>
+                <p class="eyebrow">자동 추천</p>
+                <h2>확인 필요 목록</h2>
+              </div>
+            </div>
+            <ul class="alert-list" id="alertList"></ul>
+          </section>
+        </section>
+
+        <section class="page" id="wednesdayPage">
+          <section class="main-panel">
+            <div class="section-head compact">
+              <div>
+                <p class="eyebrow">수요일 기준 반 정보</p>
+                <h2>선택 반 기본 정보 수정</h2>
+              </div>
+            </div>
+            <div class="class-form">
+              <label>
+                반 이름
+                <input type="text" data-class-field="name" />
+              </label>
+              <label>
+                수업 요일
+                <select data-class-field="classDays">
+                  <option>월목</option>
+                  <option>화금</option>
+                  <option>월금</option>
+                  <option>화목</option>
+                </select>
+              </label>
+              <label>
+                수업 시간
+                <input type="text" data-class-field="time" />
+              </label>
+              <label>
+                담당 선생님
+                <input type="text" data-class-field="teacher" />
+              </label>
+              <label>
+                교재
+                <input type="text" data-class-field="book" />
+              </label>
+              <label>
+                레벨 / 설명
+                <input type="text" data-class-field="level" />
+              </label>
+            </div>
+          </section>
+
+          <section class="summary-grid" aria-label="수요일 타임 요약">
+            <article class="summary-card">
+              <span>3시 타임</span>
+              <strong id="slot3Count">0명</strong>
+              <small>주간테스트 / 보강 / 듣기</small>
+            </article>
+            <article class="summary-card accent-green">
+              <span>4시30분 타임</span>
+              <strong id="slot430Count">0명</strong>
+              <small>개별 진행</small>
+            </article>
+            <article class="summary-card accent-orange">
+              <span>6시 타임</span>
+              <strong id="slot6Count">0명</strong>
+              <small>개별 진행</small>
+            </article>
+            <article class="summary-card accent-red">
+              <span>체크 누락</span>
+              <strong id="wednesdayMissingCount">0명</strong>
+              <small>듣기/테스트 확인</small>
+            </article>
+          </section>
+
+          <section class="main-panel">
+            <div class="section-head">
+              <div>
+                <p class="eyebrow">수요일 개별 수업</p>
+                <h2>주간테스트 / 보강 / 듣기 체크</h2>
+              </div>
+              <div class="quick-actions">
+                <button type="button" data-wed-slot="3시">3시로 지정</button>
+                <button type="button" data-wed-slot="4시30분">4시30분으로 지정</button>
+                <button type="button" data-wed-slot="6시">6시로 지정</button>
+              </div>
+            </div>
+            <div class="table-wrap">
+              <table class="wednesday-table">
+                <thead>
+                  <tr>
+                    <th>학생</th>
+                    <th>반</th>
+                    <th>등원 요일</th>
+                    <th>수요일 타임</th>
+                    <th>주간테스트</th>
+                    <th>보강</th>
+                    <th>듣기 강</th>
+                    <th>듣기 방식</th>
+                    <th>맞은 개수</th>
+                    <th>비고</th>
+                  </tr>
+                </thead>
+                <tbody id="wednesdayRows"></tbody>
+              </table>
+            </div>
+          </section>
+        </section>
+
+        <section class="page" id="calendarPage">
+          <section class="workspace-grid">
+            <div class="main-panel">
+              <div class="section-head">
+                <div>
+                  <p class="eyebrow">날짜별 기록</p>
+                  <h2 id="calendarMonthTitle">달력</h2>
+                </div>
+                <div class="quick-actions">
+                  <button type="button" id="prevMonthBtn">이전달</button>
+                  <button type="button" id="thisMonthBtn">이번달</button>
+                  <button type="button" id="nextMonthBtn">다음달</button>
+                </div>
+              </div>
+              <div class="calendar-grid" id="calendarGrid"></div>
+            </div>
+
+            <aside class="detail-panel">
+              <div class="section-head compact">
+                <div>
+                  <p class="eyebrow">선택 날짜</p>
+                  <h2 id="selectedDateTitle">오늘</h2>
+                </div>
+              </div>
+              <div class="calendar-day-summary" id="calendarDaySummary"></div>
+            </aside>
+          </section>
+
+          <section class="main-panel">
+            <div class="section-head compact">
+              <div>
+                <p class="eyebrow">정규 수업 결과</p>
+                <h2>학생별 날짜 기록</h2>
+              </div>
+            </div>
+            <div class="table-wrap">
+              <table class="calendar-result-table">
+                <thead>
+                  <tr>
+                    <th>학생</th>
+                    <th>반</th>
+                    <th>출석</th>
+                    <th>과제</th>
+                    <th>단어 Day</th>
+                    <th>단어 완료</th>
+                    <th>비고</th>
+                  </tr>
+                </thead>
+                <tbody id="calendarRegularRows"></tbody>
+              </table>
+            </div>
+          </section>
+
+          <section class="main-panel">
+            <div class="section-head compact">
+              <div>
+                <p class="eyebrow">수요일 개별 결과</p>
+                <h2>주간테스트 / 보강 / 듣기</h2>
+              </div>
+            </div>
+            <div class="table-wrap">
+              <table class="calendar-result-table">
+                <thead>
+                  <tr>
+                    <th>학생</th>
+                    <th>반</th>
+                    <th>타임</th>
+                    <th>주간테스트</th>
+                    <th>보강</th>
+                    <th>듣기 강</th>
+                    <th>듣기 방식</th>
+                    <th>맞은 개수</th>
+                    <th>비고</th>
+                  </tr>
+                </thead>
+                <tbody id="calendarWednesdayRows"></tbody>
+              </table>
+            </div>
+          </section>
+        </section>
+
+        <section class="page" id="studentPage">
+          <section class="main-panel">
+            <div class="section-head compact">
+              <div>
+                <p class="eyebrow">학생 소속 반 정보</p>
+                <h2>반명 / 교재 / 담당 수정</h2>
+              </div>
+            </div>
+            <div class="class-form">
+              <label>
+                반 이름
+                <input type="text" data-class-field="name" />
+              </label>
+              <label>
+                수업 요일
+                <select data-class-field="classDays">
+                  <option>월목</option>
+                  <option>화금</option>
+                  <option>월금</option>
+                  <option>화목</option>
+                </select>
+              </label>
+              <label>
+                수업 시간
+                <input type="text" data-class-field="time" />
+              </label>
+              <label>
+                담당 선생님
+                <input type="text" data-class-field="teacher" />
+              </label>
+              <label>
+                교재
+                <input type="text" data-class-field="book" />
+              </label>
+              <label>
+                레벨 / 설명
+                <input type="text" data-class-field="level" />
+              </label>
+            </div>
+          </section>
+
+          <section class="workspace-grid">
+            <div class="main-panel">
+              <div class="section-head">
+                <div>
+                  <p class="eyebrow">학생별 관리</p>
+                  <h2>기본 정보 / 상담 기록</h2>
+                </div>
+                <label class="inline-label">
+                  학생 선택
+                  <select id="studentPicker"></select>
+                </label>
+              </div>
+              <div class="class-form">
+                <label>
+                  소속 반
+                  <select id="studentClassSelect"></select>
+                </label>
+                <label>
+                  이름
+                  <input type="text" data-profile-field="name" />
+                </label>
+                <label>
+                  학교
+                  <input type="text" data-profile-field="school" />
+                </label>
+                <label>
+                  학년
+                  <input type="text" data-profile-field="grade" />
+                </label>
+                <label>
+                  등원 요일
+                  <select data-profile-field="schedulePattern">
+                    <option>월목</option>
+                    <option>화금</option>
+                    <option>월금</option>
+                    <option>화목</option>
+                    <option>수요일</option>
+                    <option>개별</option>
+                  </select>
+                </label>
+                <label>
+                  수요일 타임
+                  <select data-profile-field="wednesdaySlot">
+                    <option>미정</option>
+                    <option>3시</option>
+                    <option>4시30분</option>
+                    <option>6시</option>
+                  </select>
+                </label>
+                <label>
+                  레벨
+                  <input type="text" data-profile-field="level" />
+                </label>
+                <label>
+                  학생 연락처
+                  <input type="text" data-profile-field="phone" />
+                </label>
+                <label>
+                  학부모 연락처
+                  <input type="text" data-profile-field="parentPhone" />
+                </label>
+                <label>
+                  관리 상태
+                  <input type="text" data-profile-field="status" />
+                </label>
+              </div>
+            </div>
+
+            <aside class="detail-panel">
+              <div class="section-head compact">
+                <div>
+                  <p class="eyebrow">상담 추가</p>
+                  <h2>상담 기록 입력</h2>
+                </div>
+              </div>
+              <div class="detail-form" id="consultForm">
+                <label>
+                  상담일
+                  <input type="date" id="consultDate" />
+                </label>
+                <label>
+                  구분
+                  <select id="consultType">
+                    <option>학부모 상담</option>
+                    <option>학생 상담</option>
+                    <option>카톡 안내</option>
+                    <option>전화</option>
+                    <option>기타</option>
+                  </select>
+                </label>
+                <label>
+                  내용
+                  <textarea id="consultContent" rows="6" placeholder="상담 내용, 전달사항, 다음 확인할 점을 적어주세요."></textarea>
+                </label>
+              </div>
+              <button class="primary-btn full-btn" type="button" id="addConsultBtn">상담 기록 저장</button>
+            </aside>
+          </section>
+
+          <section class="main-panel">
+            <div class="section-head compact">
+              <div>
+                <p class="eyebrow">누적 기록</p>
+                <h2 id="consultTitle">상담 기록</h2>
+              </div>
+            </div>
+            <ul class="consult-list" id="consultList"></ul>
+          </section>
+
+          <section class="main-panel">
+            <div class="section-head">
+              <div>
+                <p class="eyebrow">시험 성적</p>
+                <h2 id="examTitle">내신 성적 관리</h2>
+              </div>
+              <button class="outline-btn" type="button" id="addExamYearBtn">년도 추가</button>
+            </div>
+            <div class="table-wrap">
+              <table class="exam-table">
+                <thead>
+                  <tr>
+                    <th>년도</th>
+                    <th>1학기 중간고사</th>
+                    <th>1학기 기말고사</th>
+                    <th>2학기 중간고사</th>
+                    <th>2학기 기말고사</th>
+                    <th>비고</th>
+                    <th>삭제</th>
+                  </tr>
+                </thead>
+                <tbody id="examRows"></tbody>
+              </table>
+            </div>
+          </section>
+        </section>
+
+        <section class="page" id="inactivePage">
+          <section class="summary-grid" aria-label="휴원 퇴원 요약">
+            <article class="summary-card">
+              <span>휴/퇴원 전체</span>
+              <strong id="inactiveTotalCount">0명</strong>
+              <small>보관 중인 학생</small>
+            </article>
+            <article class="summary-card accent-green">
+              <span>휴원</span>
+              <strong id="pauseCount">0명</strong>
+              <small>재등록 가능성 관리</small>
+            </article>
+            <article class="summary-card accent-orange">
+              <span>퇴원</span>
+              <strong id="withdrawCount">0명</strong>
+              <small>퇴원 사유 기록</small>
+            </article>
+            <article class="summary-card accent-red">
+              <span>사유 미입력</span>
+              <strong id="inactiveMissingCount">0명</strong>
+              <small>추가 확인 필요</small>
+            </article>
+          </section>
+
+          <section class="main-panel">
+            <div class="section-head compact">
+              <div>
+                <p class="eyebrow">휴/퇴원생 목록</p>
+                <h2>사유 / 시작일 관리</h2>
+              </div>
+            </div>
+            <div class="table-wrap">
+              <table class="inactive-table">
+                <thead>
+                  <tr>
+                    <th>이름</th>
+                    <th>기존 반</th>
+                    <th>학교</th>
+                    <th>학년</th>
+                    <th>구분</th>
+                    <th>시작일</th>
+                    <th>휴원 사유</th>
+                    <th>퇴원 사유</th>
+                    <th>학부모 연락처</th>
+                    <th>재등록</th>
+                    <th>삭제</th>
+                  </tr>
+                </thead>
+                <tbody id="inactiveRows"></tbody>
+              </table>
+            </div>
+          </section>
+        </section>
+
+        <section class="page" id="classPage">
+          <section class="main-panel">
+            <div class="section-head">
+              <div>
+                <p class="eyebrow">반 정보 수정</p>
+                <h2>반 기본 정보</h2>
+              </div>
+              <button class="outline-btn danger" type="button" id="deleteClassBtn">현재 반 삭제</button>
+            </div>
+            <div class="class-form">
+              <label>
+                반 이름
+                <input type="text" data-class-field="name" />
+              </label>
+              <label>
+                수업 요일
+                <select data-class-field="classDays">
+                  <option>월목</option>
+                  <option>화금</option>
+                  <option>월금</option>
+                  <option>화목</option>
+                </select>
+              </label>
+              <label>
+                수업 시간
+                <input type="text" data-class-field="time" />
+              </label>
+              <label>
+                문법 요일
+                <select data-class-field="grammarDay">
+                  <option>월</option>
+                  <option>화</option>
+                  <option>목</option>
+                  <option>금</option>
+                </select>
+              </label>
+              <label>
+                독해 요일
+                <select data-class-field="readingDay">
+                  <option>월</option>
+                  <option>화</option>
+                  <option>목</option>
+                  <option>금</option>
+                </select>
+              </label>
+              <label>
+                담당 선생님
+                <input type="text" data-class-field="teacher" />
+              </label>
+              <label>
+                교재
+                <input type="text" data-class-field="book" />
+              </label>
+              <label>
+                레벨 / 설명
+                <input type="text" data-class-field="level" />
+              </label>
+            </div>
+          </section>
+
+          <section class="main-panel">
+            <div class="section-head">
+              <div>
+                <p class="eyebrow">학생 추가 삭제</p>
+                <h2>반별 학생 명단</h2>
+              </div>
+              <button class="primary-btn" type="button" id="addStudentInClassBtn">학생추가등록</button>
+            </div>
+            <div class="table-wrap">
+              <table class="roster-table">
+                <thead>
+                  <tr>
+                    <th>이름</th>
+                    <th>소속 반</th>
+                    <th>학교</th>
+                    <th>학년</th>
+                    <th>등원 요일</th>
+                    <th>수요일 타임</th>
+                    <th>학생 연락처</th>
+                    <th>학부모 연락처</th>
+                    <th>상태</th>
+                    <th>휴/퇴원</th>
+                  </tr>
+                </thead>
+                <tbody id="rosterRows"></tbody>
+              </table>
+            </div>
+          </section>
+        </section>
+      </main>
+    </div>
+
+    <div class="toast" id="toast" role="status" aria-live="polite">저장되었습니다.</div>
+    <script src="app.js"></script>
+  </body>
+</html>
