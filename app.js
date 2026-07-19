@@ -124,6 +124,7 @@ const recordDateInput = document.querySelector("#recordDateInput");
 const calendarGrid = document.querySelector("#calendarGrid");
 const calendarRegularRows = document.querySelector("#calendarRegularRows");
 const calendarWednesdayRows = document.querySelector("#calendarWednesdayRows");
+const reportClassFilter = document.querySelector("#reportClassFilter");
 const reportStudentPicker = document.querySelector("#reportStudentPicker");
 const reportDateInput = document.querySelector("#reportDateInput");
 const reportPreview = document.querySelector("#reportPreview");
@@ -583,9 +584,23 @@ function renderStudentPicker() {
 }
 
 function renderReportTools() {
-  reportStudentPicker.innerHTML = allStudentRefs()
-    .map(({ classItem, student }) => `<option value="${student.id}" ${student.id === state.selectedStudentId ? "selected" : ""}>${escapeHtml(student.name)} - ${escapeHtml(classItem.name)}</option>`)
+  const classItem = currentClass();
+  const students = classItem?.students || [];
+
+  reportClassFilter.innerHTML = state.classes
+    .map((item) => `<option value="${item.id}" ${item.id === state.activeClassId ? "selected" : ""}>${escapeHtml(item.name)} ${escapeHtml(item.classDays || "")} ${escapeHtml(item.time || "")}</option>`)
     .join("");
+
+  if (!students.some((student) => student.id === state.selectedStudentId)) {
+    state.selectedStudentId = students[0]?.id || "";
+  }
+
+  reportStudentPicker.innerHTML = students.length
+    ? students
+        .map((student) => `<option value="${student.id}" ${student.id === state.selectedStudentId ? "selected" : ""}>${escapeHtml(student.name)} - ${escapeHtml(classItem.name)}</option>`)
+        .join("")
+    : `<option value="">선택 반에 학생이 없습니다</option>`;
+  reportStudentPicker.disabled = !students.length;
   reportDateInput.value = selectedDate();
 }
 
@@ -1287,6 +1302,12 @@ document.querySelector("#copyReportBtn").addEventListener("click", copyReport);
 document.querySelector("#downloadReportImageBtn").addEventListener("click", downloadReportImage);
 document.querySelector("#downloadReportPdfBtn").addEventListener("click", downloadReportPdf);
 document.querySelector("#shareReportBtn").addEventListener("click", shareReport);
+reportClassFilter.addEventListener("change", (event) => {
+  state.activeClassId = event.target.value;
+  state.selectedStudentId = currentClass().students[0]?.id || "";
+  render();
+  saveState(false);
+});
 reportStudentPicker.addEventListener("change", (event) => {
   state.selectedStudentId = event.target.value;
   const ref = findStudentById(event.target.value);
