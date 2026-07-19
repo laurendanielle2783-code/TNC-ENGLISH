@@ -7,6 +7,8 @@ const wednesdaySlotOptions = ["미정", "3시", "4시30분", "6시"];
 const checkOptions = ["미진행", "완료", "보류", "불참"];
 const listeningModeOptions = ["미진행", "문제", "딕테이션", "문제+딕테이션"];
 const inactiveTypeOptions = ["휴원", "퇴원"];
+const bookCategoryOptions = ["문법", "독해", "작문", "단어", "듣기"];
+const bookStatusOptions = ["진행중", "완료", "보류", "교체"];
 const pageTitles = {
   todayPage: "정규 수업 관리",
   wednesdayPage: "수요일 개별 관리",
@@ -124,6 +126,7 @@ const studentPicker = document.querySelector("#studentPicker");
 const studentClassSelect = document.querySelector("#studentClassSelect");
 const inactiveRows = document.querySelector("#inactiveRows");
 const examRows = document.querySelector("#examRows");
+const bookHistoryRows = document.querySelector("#bookHistoryRows");
 const recordDateInput = document.querySelector("#recordDateInput");
 const calendarGrid = document.querySelector("#calendarGrid");
 const calendarRegularRows = document.querySelector("#calendarRegularRows");
@@ -235,6 +238,7 @@ function createStudent(overrides = {}) {
     wednesdayMemo: "",
     consults: [],
     examScores: [],
+    bookHistory: [],
     inactiveType: "휴원",
     inactiveStartDate: "",
     pauseReason: "",
@@ -476,6 +480,7 @@ function render() {
   renderStudentClassSelectors();
   renderStudentProfile();
   renderConsults();
+  renderBookHistory();
   renderExamScores();
   renderInactiveRows();
   renderInactiveSummary();
@@ -814,6 +819,44 @@ function renderConsults() {
         )
         .join("")
     : `<li><div><strong>저장된 상담 기록이 없습니다.</strong><p>오른쪽 입력칸에서 상담 내용을 추가할 수 있습니다.</p></div></li>`;
+}
+
+function renderBookHistory() {
+  const student = selectedStudent();
+  document.querySelector("#bookHistoryTitle").textContent = student ? `${student.name} 교재 이력` : "학생별 교재 누적 관리";
+
+  if (!student) {
+    bookHistoryRows.innerHTML = `<tr><td colspan="8">학생을 선택해주세요.</td></tr>`;
+    return;
+  }
+
+  student.bookHistory ||= [];
+  bookHistoryRows.innerHTML = student.bookHistory.length
+    ? student.bookHistory
+        .map(
+          (book) => `
+            <tr data-book-id="${book.id}">
+              <td>
+                <select data-book-field="category">
+                  ${optionList(bookCategoryOptions, book.category)}
+                </select>
+              </td>
+              <td><input data-book-field="title" value="${escapeHtml(book.title)}" placeholder="책 이름" /></td>
+              <td><input data-book-field="level" value="${escapeHtml(book.level)}" placeholder="Level 1 / 2권" /></td>
+              <td><input type="date" data-book-field="startDate" value="${escapeHtml(book.startDate)}" /></td>
+              <td><input type="date" data-book-field="endDate" value="${escapeHtml(book.endDate)}" /></td>
+              <td>
+                <select data-book-field="status">
+                  ${optionList(bookStatusOptions, book.status)}
+                </select>
+              </td>
+              <td><input class="memo-input" data-book-field="memo" value="${escapeHtml(book.memo)}" placeholder="변경 사유, 진도 메모" /></td>
+              <td><button class="small-danger" type="button" data-delete-book="${book.id}">삭제</button></td>
+            </tr>
+          `
+        )
+        .join("")
+    : `<tr><td colspan="8">교재 추가 버튼으로 학생별 책 이력을 기록할 수 있습니다.</td></tr>`;
 }
 
 function renderExamScores() {
@@ -1195,6 +1238,29 @@ function addExamYear() {
   showToast("성적 기록 행이 추가되었습니다.");
 }
 
+function addBookHistory() {
+  const student = selectedStudent();
+  if (!student) {
+    showToast("학생을 먼저 선택해주세요.");
+    return;
+  }
+
+  student.bookHistory ||= [];
+  student.bookHistory.unshift({
+    id: `book-${Date.now()}`,
+    category: "문법",
+    title: "",
+    level: "",
+    startDate: new Date().toISOString().slice(0, 10),
+    endDate: "",
+    status: "진행중",
+    memo: ""
+  });
+  renderBookHistory();
+  saveState(false);
+  showToast("교재 이력 행이 추가되었습니다.");
+}
+
 function updateInactiveStudent(studentId, field, value) {
   const student = state.inactiveStudents.find((item) => item.id === studentId);
   if (!student) return;
@@ -1278,7 +1344,8 @@ function buildReportPayload() {
     regular,
     wednesday,
     consults: (ref.student.consults || []).slice(0, 3),
-    examScores: (ref.student.examScores || []).slice(0, 3)
+    examScores: (ref.student.examScores || []).slice(0, 3),
+    bookHistory: (ref.student.bookHistory || []).slice(0, 10)
   };
 }
 
@@ -1514,6 +1581,7 @@ document.querySelector("#deleteSelectedBtn").addEventListener("click", () => {
 document.querySelector("#saveBtn").addEventListener("click", () => saveState(true));
 document.querySelector("#addConsultBtn").addEventListener("click", addConsult);
 document.querySelector("#addExamYearBtn").addEventListener("click", addExamYear);
+document.querySelector("#addBookHistoryBtn").addEventListener("click", addBookHistory);
 document.querySelector("#generateReportBtn").addEventListener("click", generateReport);
 document.querySelector("#copyReportBtn").addEventListener("click", copyReport);
 document.querySelector("#downloadReportImageBtn").addEventListener("click", downloadReportImage);
@@ -1738,6 +1806,35 @@ examRows.addEventListener("click", (event) => {
   renderExamScores();
   saveState(false);
   showToast("성적 기록이 삭제되었습니다.");
+});
+
+bookHistoryRows.addEventListener("input", (event) => {
+  const target = event.target;
+  const row = target.closest("tr");
+  const student = selectedStudent();
+  if (!row || !student || !target.dataset.bookField) return;
+  const book = (student.bookHistory || []).find((item) => item.id === row.dataset.bookId);
+  if (book) book[target.dataset.bookField] = target.value;
+});
+
+bookHistoryRows.addEventListener("change", (event) => {
+  const target = event.target;
+  const row = target.closest("tr");
+  const student = selectedStudent();
+  if (!row || !student || !target.dataset.bookField) return;
+  const book = (student.bookHistory || []).find((item) => item.id === row.dataset.bookId);
+  if (book) book[target.dataset.bookField] = target.value;
+  saveState(false);
+});
+
+bookHistoryRows.addEventListener("click", (event) => {
+  const button = event.target.closest("[data-delete-book]");
+  const student = selectedStudent();
+  if (!button || !student) return;
+  student.bookHistory = (student.bookHistory || []).filter((book) => book.id !== button.dataset.deleteBook);
+  renderBookHistory();
+  saveState(false);
+  showToast("교재 이력이 삭제되었습니다.");
 });
 
 inactiveRows.addEventListener("input", (event) => {

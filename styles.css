@@ -413,6 +413,10 @@ table {
   min-width: 920px;
 }
 
+.book-table {
+  min-width: 1080px;
+}
+
 .calendar-result-table {
   min-width: 980px;
 }

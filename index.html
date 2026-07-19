@@ -584,6 +584,33 @@
           <section class="main-panel">
             <div class="section-head">
               <div>
+                <p class="eyebrow">교재 이력</p>
+                <h2 id="bookHistoryTitle">학생별 교재 누적 관리</h2>
+              </div>
+              <button class="outline-btn" type="button" id="addBookHistoryBtn">교재 추가</button>
+            </div>
+            <div class="table-wrap">
+              <table class="book-table">
+                <thead>
+                  <tr>
+                    <th>영역</th>
+                    <th>책 이름</th>
+                    <th>레벨 / 권수</th>
+                    <th>시작일</th>
+                    <th>종료일</th>
+                    <th>상태</th>
+                    <th>비고</th>
+                    <th>삭제</th>
+                  </tr>
+                </thead>
+                <tbody id="bookHistoryRows"></tbody>
+              </table>
+            </div>
+          </section>
+
+          <section class="main-panel">
+            <div class="section-head">
+              <div>
                 <p class="eyebrow">시험 성적</p>
                 <h2 id="examTitle">내신 성적 관리</h2>
               </div>
