@@ -25,6 +25,10 @@ const defaultState = {
   calendarMonth: new Date().toISOString().slice(0, 7),
   dailyRecords: {},
   inactiveStudents: [],
+  reportPromptProfile: {
+    currentQuestion: 0,
+    answers: {}
+  },
   classes: [
     {
       id: "class-posan-2",
@@ -132,6 +136,79 @@ const reportStatus = document.querySelector("#reportStatus");
 const importDataInput = document.querySelector("#importDataInput");
 const toast = document.querySelector("#toast");
 
+const promptQuestions = [
+  {
+    key: "academyName",
+    question: "학원명은 무엇인가요?",
+    suggestions: ["TNC 영어학원", "TNC English", "우리 학원명 그대로 사용"]
+  },
+  {
+    key: "subjects",
+    question: "어떤 과목을 가르치나요?",
+    suggestions: ["영어", "영어 독해·문법·듣기·단어", "내신 영어와 영어 기본기"]
+  },
+  {
+    key: "studentRange",
+    question: "학생의 주요 연령과 학년은 어떻게 되나요?",
+    suggestions: ["초등학교 3~6학년, 중학교 1~3학년", "초등 고학년과 중학생", "중등부 중심"]
+  },
+  {
+    key: "educationGoal",
+    question: "학원 수업의 가장 중요한 교육목표는 무엇인가요?",
+    suggestions: ["영어 자신감과 성적 향상", "단어·문법·독해 기본기 강화", "자기주도 학습 습관 형성"]
+  },
+  {
+    key: "reportPurpose",
+    question: "보고서의 주요 목적은 무엇인가요?",
+    suggestions: ["월간 학습보고서", "주간 성장보고서", "상담용 보고서와 학부모 안내문"]
+  },
+  {
+    key: "reportFrequency",
+    question: "보고서를 얼마나 자주 작성할까요?",
+    suggestions: ["매주 1회", "월 1회", "시험 전후와 상담 필요 시"]
+  },
+  {
+    key: "evaluationItems",
+    question: "보고서에 넣을 평가항목은 무엇인가요?",
+    suggestions: ["단어, 문법, 리딩, 리스닝, 숙제, 출석, 수업 참여도", "단어, 독해, 듣기, 과제 수행", "문법 이해도, 어휘력, 리딩 정확도, 학습 태도"]
+  },
+  {
+    key: "reportSections",
+    question: "원하는 보고서 구성은 무엇인가요?",
+    suggestions: ["한 줄 요약, 성장한 점, 영역별 성취도, 연습할 점, 다음 목표, 선생님 코멘트", "지난 기간의 모습, 이번 기간 성장, 다음 목표", "점수 변화, 학습 내용, 교사 코멘트"]
+  },
+  {
+    key: "writingTone",
+    question: "학부모에게 전달할 문체는 어떤 느낌이면 좋을까요?",
+    suggestions: ["따뜻하고 친근하면서도 전문적인 문체", "칭찬과 격려 중심 문체", "간결하고 핵심적인 문체"]
+  },
+  {
+    key: "reportLength",
+    question: "보고서 분량은 어느 정도가 좋을까요?",
+    suggestions: ["짧은 안내형: 200~300자", "기본 보고서형: 500~700자", "상세 보고서형: 800~1,200자"]
+  },
+  {
+    key: "reportUse",
+    question: "보고서는 어디에 사용할 예정인가요?",
+    suggestions: ["카카오톡 공유", "PDF 저장 후 발송", "상담 자료와 학부모 안내문"]
+  },
+  {
+    key: "prohibitedRules",
+    question: "기본 금지사항을 모두 적용할까요?",
+    suggestions: ["네, 모두 적용해주세요.", "추측 금지, 비교 금지, 부정적 낙인 표현 금지", "전문용어를 피하고 성장 가능성을 함께 설명"]
+  },
+  {
+    key: "extraBannedWords",
+    question: "학원만의 추가 금지표현이 있나요?",
+    suggestions: ["없습니다.", "못한다, 부족하다처럼 단정적인 표현은 피해주세요.", "다른 학생과 비교하는 표현은 절대 사용하지 말아주세요."]
+  },
+  {
+    key: "studentInputs",
+    question: "보고서를 만들 때 사용할 학생별 입력정보는 무엇인가요?",
+    suggestions: ["이름, 학년, 반, 보고 기간, 단어, 문법, 리딩, 리스닝, 과제, 출석, 교사 메모", "학생 이름, 학년, 반, 평가 결과, 학습 내용, 잘한 점, 연습할 점", "현재 사이트에 저장된 출결·과제·단어·듣기·상담·성적 기록"]
+  }
+];
+
 function createStudent(overrides = {}) {
   return {
     id: `student-${Date.now()}-${Math.random().toString(16).slice(2)}`,
@@ -214,6 +291,12 @@ function normalizeState(raw) {
     calendarMonth: raw.calendarMonth || (raw.selectedDate || new Date().toISOString().slice(0, 10)).slice(0, 7),
     dailyRecords: raw.dailyRecords && typeof raw.dailyRecords === "object" ? raw.dailyRecords : {},
     inactiveStudents: Array.isArray(raw.inactiveStudents) ? raw.inactiveStudents.map((student) => createStudent(student)) : [],
+    reportPromptProfile: raw.reportPromptProfile && typeof raw.reportPromptProfile === "object"
+      ? {
+          currentQuestion: Number(raw.reportPromptProfile.currentQuestion) || 0,
+          answers: raw.reportPromptProfile.answers && typeof raw.reportPromptProfile.answers === "object" ? raw.reportPromptProfile.answers : {}
+        }
+      : structuredClone(defaultState.reportPromptProfile),
     classes: Array.isArray(raw.classes) && raw.classes.length ? raw.classes : structuredClone(defaultState.classes)
   };
 
@@ -397,6 +480,7 @@ function render() {
   renderInactiveRows();
   renderInactiveSummary();
   renderReportTools();
+  renderPromptBuilder();
   renderAlerts(classItem);
   renderPage();
 }
@@ -603,6 +687,94 @@ function renderReportTools() {
     : `<option value="">선택 반에 학생이 없습니다</option>`;
   reportStudentPicker.disabled = !students.length;
   reportDateInput.value = selectedDate();
+}
+
+function renderPromptBuilder() {
+  const profile = state.reportPromptProfile;
+  const index = Math.min(profile.currentQuestion || 0, promptQuestions.length - 1);
+  const question = promptQuestions[index];
+  const isComplete = Object.keys(profile.answers || {}).length >= promptQuestions.length;
+
+  document.querySelector("#promptQuestion").textContent = isComplete ? "프롬프트 설정이 완료되었습니다." : question.question;
+  document.querySelector("#promptAnswer").value = isComplete ? "" : profile.answers[question.key] || "";
+  document.querySelector("#promptAnswer").disabled = isComplete;
+  document.querySelector("#promptSuggestionBtn").disabled = isComplete;
+  document.querySelector("#promptNextBtn").textContent = isComplete ? "완료" : "답변 저장";
+  document.querySelector("#promptNextBtn").disabled = isComplete;
+  document.querySelector("#promptSuggestions").innerHTML = "";
+  document.querySelector("#promptProgress").textContent = `${Math.min(index + 1, promptQuestions.length)} / ${promptQuestions.length}`;
+  document.querySelector("#customPromptPreview").textContent = isComplete ? buildCustomPromptText() : "질문을 모두 완료하면 여기에 표시됩니다.";
+}
+
+function savePromptAnswer() {
+  const profile = state.reportPromptProfile;
+  const question = promptQuestions[profile.currentQuestion || 0];
+  const answer = document.querySelector("#promptAnswer").value.trim();
+
+  if (!answer) {
+    showToast("답변을 입력해주세요.");
+    return;
+  }
+
+  profile.answers[question.key] = answer;
+  profile.currentQuestion = Math.min((profile.currentQuestion || 0) + 1, promptQuestions.length);
+  saveState(false);
+  renderPromptBuilder();
+  showToast("답변을 저장했습니다.");
+}
+
+function showPromptSuggestions() {
+  const profile = state.reportPromptProfile;
+  const question = promptQuestions[profile.currentQuestion || 0];
+  document.querySelector("#promptSuggestions").innerHTML = question.suggestions
+    .map((item) => `<button type="button" data-prompt-suggestion="${escapeHtml(item)}">${escapeHtml(item)}</button>`)
+    .join("");
+}
+
+function resetPromptBuilder() {
+  const confirmed = window.confirm("프롬프트 설정 답변을 처음부터 다시 입력할까요?");
+  if (!confirmed) return;
+  state.reportPromptProfile = structuredClone(defaultState.reportPromptProfile);
+  saveState(false);
+  renderPromptBuilder();
+  showToast("프롬프트 설정을 초기화했습니다.");
+}
+
+function buildCustomPromptText() {
+  const answers = state.reportPromptProfile.answers || {};
+  return [
+    "당신은 학원 원장님을 돕는 학부모용 학습보고서 작성 전문가입니다.",
+    "",
+    `학원명: ${answers.academyName || "TNC 영어학원"}`,
+    `과목: ${answers.subjects || "영어"}`,
+    `학생 대상: ${answers.studentRange || "초등학교 3~6학년, 중학교 1~3학년"}`,
+    `교육목표: ${answers.educationGoal || "영어 자신감과 성적 향상"}`,
+    `보고서 목적: ${answers.reportPurpose || "학부모용 학습보고서"}`,
+    `작성 주기: ${answers.reportFrequency || "필요 시"}`,
+    `평가항목: ${answers.evaluationItems || "단어, 문법, 리딩, 리스닝, 숙제, 출석, 수업 참여도"}`,
+    `보고서 구성: ${answers.reportSections || "성장 요약, 성취도, 연습할 점, 다음 목표, 선생님 코멘트"}`,
+    `문체: ${answers.writingTone || "따뜻하고 구체적인 문체"}`,
+    `분량: ${answers.reportLength || "기본 보고서형: 500~700자"}`,
+    `사용처: ${answers.reportUse || "카카오톡 공유 및 PDF 저장"}`,
+    "",
+    "작성 금지사항:",
+    "- 입력되지 않은 성적이나 행동을 추측하지 않는다.",
+    "- 다른 학생과 비교하지 않는다.",
+    "- 아이를 질책하거나 낙인찍는 표현을 사용하지 않는다.",
+    "- 점수가 낮아도 노력과 성장 가능성을 함께 설명한다.",
+    "- 학부모가 이해하기 어려운 전문용어를 피한다.",
+    "- 확인되지 않은 진단이나 성향을 단정하지 않는다.",
+    "- 학생의 개인정보를 새로 만들거나 추가하지 않는다.",
+    "- 같은 문장을 모든 학생에게 반복하지 않는다.",
+    `추가 금지표현: ${answers.extraBannedWords || "없음"}`,
+    "",
+    `학생별 입력정보: ${answers.studentInputs || "현재 사이트에 저장된 학생 학습 기록"}`,
+    "",
+    "출력 형식:",
+    "- 제목 1줄",
+    "- 본문은 학부모가 바로 읽기 좋은 문단 형태",
+    "- 마지막에는 가정에서 확인할 사항 2개"
+  ].join("\n");
 }
 
 function renderStudentClassSelectors() {
@@ -1083,6 +1255,7 @@ function buildReportPayload() {
     reportDate: dateKey,
     template: reportTemplateLabel(document.querySelector("#reportTemplate").value),
     tone: document.querySelector("#reportTone").value,
+    customPrompt: buildCustomPromptText(),
     student: {
       name: ref.student.name,
       school: ref.student.school,
@@ -1324,6 +1497,15 @@ document.querySelector("#addStudentInClassBtn").addEventListener("click", addStu
 document.querySelector("#exportDataBtn").addEventListener("click", exportData);
 document.querySelector("#importDataBtn").addEventListener("click", () => importDataInput.click());
 importDataInput.addEventListener("change", (event) => importData(event.target.files[0]));
+document.querySelector("#promptNextBtn").addEventListener("click", savePromptAnswer);
+document.querySelector("#promptSuggestionBtn").addEventListener("click", showPromptSuggestions);
+document.querySelector("#promptResetBtn").addEventListener("click", resetPromptBuilder);
+document.querySelector("#promptSuggestions").addEventListener("click", (event) => {
+  const button = event.target.closest("[data-prompt-suggestion]");
+  if (!button) return;
+  document.querySelector("#promptAnswer").value = button.dataset.promptSuggestion;
+  document.querySelector("#promptSuggestions").innerHTML = "";
+});
 
 document.querySelector("#deleteSelectedBtn").addEventListener("click", () => {
   if (state.selectedStudentId) deleteStudent(state.selectedStudentId);
