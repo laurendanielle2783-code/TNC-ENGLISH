@@ -13,6 +13,7 @@ const pageTitles = {
   calendarPage: "달력 기록",
   studentPage: "학생별 관리",
   inactivePage: "휴/퇴원생 관리",
+  reportPage: "AI 보고서",
   classPage: "반별 학생 관리"
 };
 
@@ -123,6 +124,10 @@ const recordDateInput = document.querySelector("#recordDateInput");
 const calendarGrid = document.querySelector("#calendarGrid");
 const calendarRegularRows = document.querySelector("#calendarRegularRows");
 const calendarWednesdayRows = document.querySelector("#calendarWednesdayRows");
+const reportStudentPicker = document.querySelector("#reportStudentPicker");
+const reportDateInput = document.querySelector("#reportDateInput");
+const reportPreview = document.querySelector("#reportPreview");
+const reportStatus = document.querySelector("#reportStatus");
 const toast = document.querySelector("#toast");
 
 function createStudent(overrides = {}) {
@@ -389,6 +394,7 @@ function render() {
   renderExamScores();
   renderInactiveRows();
   renderInactiveSummary();
+  renderReportTools();
   renderAlerts(classItem);
   renderPage();
 }
@@ -574,6 +580,13 @@ function renderStudentPicker() {
   studentPicker.innerHTML = allStudentRefs()
     .map(({ classItem, student }) => `<option value="${student.id}" ${student.id === state.selectedStudentId ? "selected" : ""}>${escapeHtml(student.name)} - ${escapeHtml(classItem.name)}</option>`)
     .join("");
+}
+
+function renderReportTools() {
+  reportStudentPicker.innerHTML = allStudentRefs()
+    .map(({ classItem, student }) => `<option value="${student.id}" ${student.id === state.selectedStudentId ? "selected" : ""}>${escapeHtml(student.name)} - ${escapeHtml(classItem.name)}</option>`)
+    .join("");
+  reportDateInput.value = selectedDate();
 }
 
 function renderStudentClassSelectors() {
@@ -1001,6 +1014,200 @@ function updateInactiveStudent(studentId, field, value) {
   renderInactiveSummary();
 }
 
+function reportTemplateLabel(value) {
+  return {
+    growth: "성장 스토리",
+    weekly: "주간 체크",
+    classic: "클래식 리포트"
+  }[value] || "성장 스토리";
+}
+
+function buildReportPayload() {
+  const ref = findStudentById(reportStudentPicker.value);
+  if (!ref) return null;
+
+  const dateKey = reportDateInput.value || selectedDate();
+  const dayRecord = state.dailyRecords[dateKey] || { regular: {}, wednesday: {} };
+  const regular = dayRecord.regular?.[ref.student.id] || regularRecordFor(ref.student);
+  const wednesday = dayRecord.wednesday?.[ref.student.id] || wednesdayRecordFor(ref.student);
+
+  return {
+    academyName: "TNC 영어학원",
+    reportDate: dateKey,
+    template: reportTemplateLabel(document.querySelector("#reportTemplate").value),
+    tone: document.querySelector("#reportTone").value,
+    student: {
+      name: ref.student.name,
+      school: ref.student.school,
+      grade: ref.student.grade,
+      className: ref.classItem.name,
+      schedulePattern: ref.student.schedulePattern,
+      level: ref.student.level,
+      status: ref.student.status
+    },
+    classInfo: {
+      classDays: ref.classItem.classDays,
+      time: ref.classItem.time,
+      teacher: ref.classItem.teacher,
+      book: ref.classItem.book,
+      grammarProgress: ref.classItem.grammarProgress,
+      readingProgress: ref.classItem.readingProgress,
+      todayHomework: ref.classItem.todayHomework,
+      nextHomework: ref.classItem.nextHomework
+    },
+    regular,
+    wednesday,
+    consults: (ref.student.consults || []).slice(0, 3),
+    examScores: (ref.student.examScores || []).slice(0, 3)
+  };
+}
+
+function setReportText(text) {
+  const payload = buildReportPayload();
+  reportPreview.innerHTML = `
+    <h3>${escapeHtml(payload?.student.name || "학생")} 학습보고서</h3>
+    <p>${escapeHtml(text).replaceAll("\n", "<br>")}</p>
+  `;
+}
+
+async function generateReport() {
+  const payload = buildReportPayload();
+  if (!payload) {
+    showToast("보고서를 만들 학생을 선택해주세요.");
+    return;
+  }
+
+  reportStatus.textContent = "AI가 보고서를 작성하는 중입니다.";
+  document.querySelector("#generateReportBtn").disabled = true;
+
+  try {
+    const response = await fetch("/api/report", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload)
+    });
+    const data = await response.json().catch(() => ({}));
+    if (!response.ok) throw new Error(data.error || "보고서를 생성하지 못했습니다.");
+
+    setReportText(data.report || "");
+    reportStatus.textContent = "보고서가 생성되었습니다.";
+    showToast("AI 보고서가 생성되었습니다.");
+  } catch (error) {
+    const fallback = createLocalReport(payload);
+    setReportText(fallback);
+    reportStatus.textContent = "API 연결 확인이 필요해 기본 보고서 초안으로 표시했습니다.";
+    showToast("기본 보고서 초안을 만들었습니다.");
+  } finally {
+    document.querySelector("#generateReportBtn").disabled = false;
+  }
+}
+
+function createLocalReport(payload) {
+  const student = payload.student;
+  const regular = payload.regular;
+  const wednesday = payload.wednesday;
+  return [
+    `안녕하세요, ${student.name} 학생의 ${payload.template} 보고드립니다.`,
+    "",
+    `이번 수업에서는 ${payload.classInfo.grammarProgress || "문법 진도"}와 ${payload.classInfo.readingProgress || "독해 진도"}를 중심으로 학습했습니다.`,
+    `단어는 ${regular.wordDays || "범위 미입력"} / ${regular.wordCount || "완료 기록 미입력"}로 기록되어 있습니다.`,
+    `듣기는 ${wednesday.listenLesson || "강 미입력"} ${wednesday.listenMode || "미진행"} 상태이며, 문제 풀이 기록은 ${wednesday.listenCorrect || "-"} / ${wednesday.listenTotal || "-"}입니다.`,
+    "",
+    `다음 과제는 ${payload.classInfo.nextHomework || "수업 후 안내 예정"}입니다.`,
+    "가정에서도 단어 복습과 과제 마무리를 함께 확인해 주시면 좋겠습니다."
+  ].join("\n");
+}
+
+function currentReportText() {
+  return reportPreview.innerText.trim();
+}
+
+async function copyReport() {
+  const text = currentReportText();
+  if (!text) return;
+  await navigator.clipboard.writeText(text);
+  showToast("보고서 내용이 복사되었습니다.");
+}
+
+function downloadReportPdf() {
+  const text = currentReportText();
+  if (!text) return;
+  const printWindow = window.open("", "_blank");
+  printWindow.document.write(`
+    <html lang="ko">
+      <head>
+        <title>TNC 학습보고서</title>
+        <style>
+          body { font-family: Malgun Gothic, sans-serif; padding: 32px; line-height: 1.7; }
+          h1 { color: #ef3b18; }
+          pre { white-space: pre-wrap; font-family: inherit; }
+        </style>
+      </head>
+      <body>
+        <h1>TNC 영어학원 학습보고서</h1>
+        <pre>${escapeHtml(text)}</pre>
+      </body>
+    </html>
+  `);
+  printWindow.document.close();
+  printWindow.focus();
+  printWindow.print();
+}
+
+function wrapCanvasText(context, text, x, y, maxWidth, lineHeight) {
+  const lines = text.split("\n");
+  lines.forEach((line) => {
+    const words = line.split(" ");
+    let current = "";
+    words.forEach((word) => {
+      const test = current ? `${current} ${word}` : word;
+      if (context.measureText(test).width > maxWidth && current) {
+        context.fillText(current, x, y);
+        y += lineHeight;
+        current = word;
+      } else {
+        current = test;
+      }
+    });
+    context.fillText(current, x, y);
+    y += lineHeight;
+  });
+}
+
+function downloadReportImage() {
+  const text = currentReportText();
+  if (!text) return;
+  const canvas = document.createElement("canvas");
+  canvas.width = 1200;
+  canvas.height = 1600;
+  const context = canvas.getContext("2d");
+  context.fillStyle = "#f5f6f2";
+  context.fillRect(0, 0, canvas.width, canvas.height);
+  context.fillStyle = "#ffffff";
+  context.fillRect(70, 70, 1060, 1460);
+  context.fillStyle = "#ef3b18";
+  context.font = "700 44px Malgun Gothic, sans-serif";
+  context.fillText("TNC 영어학원 학습보고서", 120, 150);
+  context.fillStyle = "#181817";
+  context.font = "28px Malgun Gothic, sans-serif";
+  wrapCanvasText(context, text, 120, 230, 960, 48);
+  const link = document.createElement("a");
+  link.download = "TNC-학습보고서.png";
+  link.href = canvas.toDataURL("image/png");
+  link.click();
+}
+
+async function shareReport() {
+  const text = currentReportText();
+  if (!text) return;
+  if (navigator.share) {
+    await navigator.share({ title: "TNC 영어학원 학습보고서", text });
+    return;
+  }
+  await navigator.clipboard.writeText(text);
+  showToast("공유가 지원되지 않아 보고서를 복사했습니다.");
+}
+
 function showToast(message) {
   toast.textContent = message;
   toast.classList.add("show");
@@ -1075,6 +1282,20 @@ document.querySelector("#deleteSelectedBtn").addEventListener("click", () => {
 document.querySelector("#saveBtn").addEventListener("click", () => saveState(true));
 document.querySelector("#addConsultBtn").addEventListener("click", addConsult);
 document.querySelector("#addExamYearBtn").addEventListener("click", addExamYear);
+document.querySelector("#generateReportBtn").addEventListener("click", generateReport);
+document.querySelector("#copyReportBtn").addEventListener("click", copyReport);
+document.querySelector("#downloadReportImageBtn").addEventListener("click", downloadReportImage);
+document.querySelector("#downloadReportPdfBtn").addEventListener("click", downloadReportPdf);
+document.querySelector("#shareReportBtn").addEventListener("click", shareReport);
+reportStudentPicker.addEventListener("change", (event) => {
+  state.selectedStudentId = event.target.value;
+  const ref = findStudentById(event.target.value);
+  if (ref) state.activeClassId = ref.classItem.id;
+  renderStudentPicker();
+});
+reportDateInput.addEventListener("change", (event) => {
+  if (event.target.value) state.selectedDate = event.target.value;
+});
 recordDateInput.addEventListener("change", (event) => {
   if (event.target.value) selectRecordDate(event.target.value);
 });

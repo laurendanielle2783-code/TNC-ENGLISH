@@ -23,6 +23,7 @@
           <button class="nav-item" type="button" data-page="calendarPage">달력 기록</button>
           <button class="nav-item" type="button" data-page="studentPage">학생별 관리</button>
           <button class="nav-item" type="button" data-page="inactivePage">휴/퇴원생 관리</button>
+          <button class="nav-item" type="button" data-page="reportPage">AI 보고서</button>
           <button class="nav-item" type="button" data-page="classPage">반별 관리</button>
         </nav>
 
@@ -655,6 +656,74 @@
                 <tbody id="inactiveRows"></tbody>
               </table>
             </div>
+          </section>
+        </section>
+
+        <section class="page" id="reportPage">
+          <section class="workspace-grid">
+            <div class="main-panel">
+              <div class="section-head">
+                <div>
+                  <p class="eyebrow">AI 학습보고서</p>
+                  <h2>학부모용 안내문 생성</h2>
+                </div>
+                <button class="primary-btn" type="button" id="generateReportBtn">보고서 생성</button>
+              </div>
+
+              <div class="class-form report-controls">
+                <label>
+                  학생 선택
+                  <select id="reportStudentPicker"></select>
+                </label>
+                <label>
+                  보고서 양식
+                  <select id="reportTemplate">
+                    <option value="growth">성장 스토리</option>
+                    <option value="weekly">주간 체크</option>
+                    <option value="classic">클래식 리포트</option>
+                  </select>
+                </label>
+                <label>
+                  작성 톤
+                  <select id="reportTone">
+                    <option>따뜻하고 구체적으로</option>
+                    <option>간결하고 단정하게</option>
+                    <option>칭찬 중심으로</option>
+                  </select>
+                </label>
+                <label>
+                  기준 날짜
+                  <input type="date" id="reportDateInput" />
+                </label>
+              </div>
+
+              <div class="report-actions">
+                <button class="outline-btn" type="button" id="copyReportBtn">복사</button>
+                <button class="outline-btn" type="button" id="downloadReportImageBtn">이미지 저장</button>
+                <button class="outline-btn" type="button" id="downloadReportPdfBtn">PDF 저장</button>
+                <button class="outline-btn" type="button" id="shareReportBtn">휴대폰 공유</button>
+              </div>
+
+              <p class="report-status" id="reportStatus">학생과 양식을 선택한 뒤 보고서 생성을 눌러주세요.</p>
+              <article class="report-preview" id="reportPreview">
+                <h3>TNC 영어학원 학습보고서</h3>
+                <p>생성된 보고서가 여기에 표시됩니다.</p>
+              </article>
+            </div>
+
+            <aside class="detail-panel">
+              <div class="section-head compact">
+                <div>
+                  <p class="eyebrow">양식 안내</p>
+                  <h2>보고서 구성</h2>
+                </div>
+              </div>
+              <div class="report-template-list">
+                <div><strong>성장 스토리</strong><span>지난달 → 이번 달 → 다음 목표</span></div>
+                <div><strong>주간 체크</strong><span>단어·리딩·리스닝·스피킹 변화</span></div>
+                <div><strong>클래식 리포트</strong><span>점수 변화, 학습 내용, 선생님 코멘트</span></div>
+              </div>
+            </aside>
           </section>
         </section>
 

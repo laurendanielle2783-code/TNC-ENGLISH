@@ -642,6 +642,68 @@ td select {
   white-space: pre-wrap;
 }
 
+.report-controls {
+  margin-bottom: 14px;
+}
+
+.report-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 14px;
+}
+
+.report-status {
+  margin: 0 0 14px;
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.report-preview {
+  min-height: 420px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 22px;
+  background: #fbfaf6;
+}
+
+.report-preview h3 {
+  margin: 0 0 14px;
+  color: var(--red);
+  font-size: 24px;
+}
+
+.report-preview p {
+  margin: 0;
+  color: #33352f;
+  line-height: 1.8;
+  white-space: normal;
+}
+
+.report-template-list {
+  display: grid;
+  gap: 10px;
+}
+
+.report-template-list div {
+  display: grid;
+  gap: 6px;
+  padding: 13px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #fbfaf6;
+}
+
+.report-template-list strong {
+  color: var(--red);
+}
+
+.report-template-list span {
+  color: var(--muted);
+  line-height: 1.45;
+}
+
 .bottom-grid {
   display: grid;
   grid-template-columns: 1fr 1fr;
