@@ -1,4 +1,5 @@
 const STORAGE_KEY = "tnc-dashboard-v2";
+const SNAPSHOT_KEY = "tnc-dashboard-v2-snapshots";
 
 const attendanceOptions = ["출석", "지각", "결석", "보강", "상담"];
 const homeworkOptions = ["완료", "일부", "미완", "미검사"];
@@ -347,6 +348,7 @@ function inferReadingDay(classDays = "월목") {
 }
 
 function saveState(showSaved = true, syncCloud = false) {
+  saveLocalSnapshot();
   localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
   if (syncCloud) {
     saveCloudState();
@@ -371,11 +373,18 @@ async function loadCloudState() {
     if (!response.ok) throw new Error(result.error || "load failed");
 
     if (result.data) {
-      state = normalizeState(result.data);
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
-      render();
-      setCloudStatus("공용 저장 연결됨");
-      showToast("공용 저장 데이터를 불러왔습니다.");
+      const cloudState = normalizeState(result.data);
+      if (stateDataScore(cloudState) > stateDataScore(state)) {
+        saveLocalSnapshot();
+        state = cloudState;
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+        render();
+        setCloudStatus("공용 저장 연결됨");
+        showToast("공용 저장 데이터를 불러왔습니다.");
+      } else {
+        setCloudStatus("개인 데이터 보호 중");
+        showToast("현재 브라우저 데이터가 더 많아 자동 덮어쓰기를 막았습니다.");
+      }
       return;
     }
 
@@ -409,6 +418,29 @@ async function saveCloudState() {
 
 function setCloudStatus(message) {
   cloudStatus.textContent = message;
+}
+
+function stateDataScore(targetState) {
+  const classCount = targetState.classes?.length || 0;
+  const studentCount = (targetState.classes || []).reduce((total, classItem) => total + (classItem.students?.length || 0), 0);
+  const inactiveCount = targetState.inactiveStudents?.length || 0;
+  const recordCount = Object.keys(targetState.dailyRecords || {}).length;
+  return classCount * 1000 + studentCount * 10 + inactiveCount * 10 + recordCount;
+}
+
+function saveLocalSnapshot() {
+  try {
+    const snapshots = safeParse(localStorage.getItem(SNAPSHOT_KEY)) || [];
+    snapshots.unshift({
+      savedAt: new Date().toISOString(),
+      classCount: state.classes?.length || 0,
+      studentCount: (state.classes || []).reduce((total, classItem) => total + (classItem.students?.length || 0), 0),
+      data: state
+    });
+    localStorage.setItem(SNAPSHOT_KEY, JSON.stringify(snapshots.slice(0, 10)));
+  } catch {
+    // 저장공간이 부족하면 자동 백업만 건너뜁니다.
+  }
 }
 
 function currentClass() {
