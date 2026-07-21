@@ -137,7 +137,9 @@ const reportDateInput = document.querySelector("#reportDateInput");
 const reportPreview = document.querySelector("#reportPreview");
 const reportStatus = document.querySelector("#reportStatus");
 const importDataInput = document.querySelector("#importDataInput");
+const cloudStatus = document.querySelector("#cloudStatus");
 const toast = document.querySelector("#toast");
+let isCloudLoading = false;
 
 const promptQuestions = [
   {
@@ -344,9 +346,69 @@ function inferReadingDay(classDays = "월목") {
   return classDays.includes("금") ? "금" : "목";
 }
 
-function saveState(showSaved = true) {
+function saveState(showSaved = true, syncCloud = false) {
   localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+  if (syncCloud) {
+    saveCloudState();
+    return;
+  }
   if (showSaved) showToast("저장되었습니다.");
+}
+
+async function loadCloudState() {
+  if (isCloudLoading) return;
+  isCloudLoading = true;
+  setCloudStatus("공용 저장 확인 중");
+
+  try {
+    const response = await fetch("/api/state");
+    if (response.status === 503) {
+      setCloudStatus("개인 저장");
+      return;
+    }
+
+    const result = await response.json();
+    if (!response.ok) throw new Error(result.error || "load failed");
+
+    if (result.data) {
+      state = normalizeState(result.data);
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+      render();
+      setCloudStatus("공용 저장 연결됨");
+      showToast("공용 저장 데이터를 불러왔습니다.");
+      return;
+    }
+
+    setCloudStatus("공용 저장 준비됨");
+  } catch {
+    setCloudStatus("개인 저장");
+  } finally {
+    isCloudLoading = false;
+  }
+}
+
+async function saveCloudState() {
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+  setCloudStatus("공용 저장 중");
+
+  try {
+    const response = await fetch("/api/state", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ data: state })
+    });
+    const result = await response.json().catch(() => ({}));
+    if (!response.ok) throw new Error(result.error || "save failed");
+    setCloudStatus("공용 저장 완료");
+    showToast("공용 데이터베이스에 저장되었습니다.");
+  } catch {
+    setCloudStatus("개인 저장");
+    showToast("개인 브라우저에 저장되었습니다. Supabase 설정을 확인해주세요.");
+  }
+}
+
+function setCloudStatus(message) {
+  cloudStatus.textContent = message;
 }
 
 function currentClass() {
@@ -1578,7 +1640,7 @@ document.querySelector("#deleteSelectedBtn").addEventListener("click", () => {
   if (state.selectedStudentId) deleteStudent(state.selectedStudentId);
 });
 
-document.querySelector("#saveBtn").addEventListener("click", () => saveState(true));
+document.querySelector("#saveBtn").addEventListener("click", () => saveState(true, true));
 document.querySelector("#addConsultBtn").addEventListener("click", addConsult);
 document.querySelector("#addExamYearBtn").addEventListener("click", addExamYear);
 document.querySelector("#addBookHistoryBtn").addEventListener("click", addBookHistory);
@@ -1865,3 +1927,4 @@ inactiveRows.addEventListener("click", (event) => {
 
 setTodayText();
 render();
+loadCloudState();

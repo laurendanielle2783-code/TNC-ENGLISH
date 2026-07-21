@@ -49,6 +49,20 @@ input:disabled {
   clip: rect(0, 0, 0, 0);
 }
 
+.cloud-status {
+  display: inline-flex;
+  align-items: center;
+  min-height: 42px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 0 12px;
+  color: #4b4d48;
+  background: #fbfaf6;
+  font-size: 12px;
+  font-weight: 900;
+  white-space: nowrap;
+}
+
 .app-shell {
   display: grid;
   grid-template-columns: 260px minmax(0, 1fr);
