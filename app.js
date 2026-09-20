@@ -888,7 +888,7 @@ function classLevel(classItem) {
 function renderExamLessonPage() {
   const examClasses = divisionExamClasses();
   const examClass = activeExamClass();
-  const examRecord = examDayRecordFor(examClass);
+  const examRecord = examClass ? state.dailyRecords[selectedDate()]?.exam?.[examClass.id] : null;
 
   document.querySelector("#examDivisionEyebrow").textContent = `${divisionLabel()} 내신`;
   examLessonDateInput.value = selectedDate();
@@ -909,7 +909,7 @@ function renderExamLessonPage() {
 
   examLessonRows.innerHTML = examClass.students?.length
     ? examClass.students.map((student) => {
-        const studentRecord = examStudentRecordFor(examClass, student);
+        const studentRecord = examRecord?.studentResults?.[student.id] || {};
         return `
           <tr data-exam-class-student-id="${student.id}">
             <td><input data-exam-student-field="name" value="${escapeHtml(student.name)}" placeholder="학생 이름" /></td>
@@ -1273,6 +1273,7 @@ function renderPage() {
   document.querySelectorAll(".nav-item").forEach((button) => button.classList.toggle("active", button.dataset.page === state.activePage));
   const title = pageTitles[state.activePage] || "TNC 관리";
   document.querySelector("#pageTitle").textContent = state.activePage === "divisionPage" ? title : `${divisionLabel()} ${title}`;
+  document.querySelector(".top-actions").hidden = state.activePage === "divisionPage";
 }
 
 function renderDateControls() {
