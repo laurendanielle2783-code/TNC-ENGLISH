@@ -789,6 +789,35 @@
           <section class="main-panel">
             <div class="section-head">
               <div>
+                <p class="eyebrow">정규반 목록</p>
+                <h2>중등 / 고등 정규반</h2>
+              </div>
+              <div class="quick-actions">
+                <button type="button" id="addMiddleClassBtn">중등반 추가</button>
+                <button type="button" id="addHighClassBtn">고등반 추가</button>
+              </div>
+            </div>
+            <div class="level-class-grid">
+              <article>
+                <div class="level-section-title">
+                  <strong>중등 정규반</strong>
+                  <span id="middleClassCount">0개 반</span>
+                </div>
+                <div class="class-list-stack" id="middleClassList"></div>
+              </article>
+              <article>
+                <div class="level-section-title">
+                  <strong>고등 정규반</strong>
+                  <span id="highClassCount">0개 반</span>
+                </div>
+                <div class="class-list-stack" id="highClassList"></div>
+              </article>
+            </div>
+          </section>
+
+          <section class="main-panel">
+            <div class="section-head">
+              <div>
                 <p class="eyebrow">반 정보 수정</p>
                 <h2>반 기본 정보</h2>
               </div>
@@ -869,9 +898,29 @@
                     <th>휴/퇴원</th>
                   </tr>
                 </thead>
-                <tbody id="rosterRows"></tbody>
+              <tbody id="rosterRows"></tbody>
               </table>
             </div>
+          </section>
+
+          <section class="main-panel">
+            <div class="section-head compact">
+              <div>
+                <p class="eyebrow">시험 기간용</p>
+                <h2>중등 내신반 명단</h2>
+              </div>
+            </div>
+            <div class="exam-class-grid" id="middleExamClassList"></div>
+          </section>
+
+          <section class="main-panel">
+            <div class="section-head compact">
+              <div>
+                <p class="eyebrow">시험 기간용</p>
+                <h2>고등 내신반 명단</h2>
+              </div>
+            </div>
+            <div class="exam-class-grid" id="highExamClassList"></div>
           </section>
         </section>
       </main>

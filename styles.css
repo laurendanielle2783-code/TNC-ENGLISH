@@ -435,6 +435,10 @@ table {
   min-width: 980px;
 }
 
+.exam-roster-table {
+  min-width: 840px;
+}
+
 .calendar-grid {
   display: grid;
   grid-template-columns: repeat(7, minmax(72px, 1fr));
@@ -637,6 +641,94 @@ td select {
 .pattern-chip.mini {
   min-height: 30px;
   justify-content: center;
+}
+
+.level-class-grid,
+.exam-class-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+}
+
+.exam-class-grid {
+  grid-template-columns: repeat(auto-fit, minmax(420px, 1fr));
+}
+
+.level-section-title {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+
+.level-section-title strong {
+  font-size: 18px;
+}
+
+.level-section-title span {
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 900;
+}
+
+.class-list-stack {
+  display: grid;
+  gap: 8px;
+}
+
+.class-list-item {
+  display: grid;
+  gap: 5px;
+  width: 100%;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 12px;
+  background: #fbfaf6;
+  color: var(--ink);
+  text-align: left;
+}
+
+.class-list-item.active {
+  border-color: var(--red);
+  background: var(--soft-red);
+}
+
+.class-list-item span,
+.empty-note {
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.empty-note {
+  border: 1px dashed var(--line);
+  border-radius: 8px;
+  padding: 14px;
+  background: #fbfaf6;
+}
+
+.exam-class-card {
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 14px;
+  background: #fbfaf6;
+}
+
+.exam-class-card-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 12px;
+}
+
+.exam-class-title-input {
+  min-width: 0;
+  width: 100%;
+  color: var(--red);
+  font-size: 18px;
+  font-weight: 900;
 }
 
 .consult-list {
@@ -849,6 +941,8 @@ td select {
 
   .workspace-grid,
   .bottom-grid,
+  .level-class-grid,
+  .exam-class-grid,
   .class-form {
     grid-template-columns: 1fr;
   }
