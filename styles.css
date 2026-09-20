@@ -861,6 +861,25 @@ td select {
   white-space: normal;
 }
 
+.parent-message-box {
+  display: grid;
+  gap: 12px;
+  margin: 16px 0;
+  padding-top: 16px;
+  border-top: 1px solid var(--line);
+}
+
+.message-preview {
+  min-height: 180px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 14px;
+  background: #fbfaf6;
+  color: #33352f;
+  line-height: 1.7;
+  white-space: pre-wrap;
+}
+
 .report-template-list {
   display: grid;
   gap: 10px;

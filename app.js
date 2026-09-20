@@ -162,6 +162,8 @@ const reportStudentPicker = document.querySelector("#reportStudentPicker");
 const reportDateInput = document.querySelector("#reportDateInput");
 const reportPreview = document.querySelector("#reportPreview");
 const reportStatus = document.querySelector("#reportStatus");
+const parentNoticeInput = document.querySelector("#parentNoticeInput");
+const parentMessagePreview = document.querySelector("#parentMessagePreview");
 const importDataInput = document.querySelector("#importDataInput");
 const cloudStatus = document.querySelector("#cloudStatus");
 const toast = document.querySelector("#toast");
@@ -1823,6 +1825,93 @@ function currentReportText() {
   return reportPreview.innerText.trim();
 }
 
+function buildParentMessageText() {
+  const ref = selectedStudentRef();
+  if (!ref) return "";
+
+  const dateKey = selectedDate();
+  const dayRecord = state.dailyRecords[dateKey] || { regular: {}, wednesday: {}, exam: {} };
+  const regular = dayRecord.regular?.[ref.student.id] || regularRecordFor(ref.student);
+  const wednesday = dayRecord.wednesday?.[ref.student.id] || wednesdayRecordFor(ref.student);
+  const examMatches = examRecordRefsForDate(dateKey).filter(({ student }) => student.name && student.name === ref.student.name);
+  const notice = parentNoticeInput.value.trim();
+
+  const homeworkText = [
+    `과제 결과: ${regular.homework || "미기록"}`,
+    ref.classItem.todayHomework ? `오늘 과제: ${ref.classItem.todayHomework}` : "",
+    ref.classItem.nextHomework ? `다음 과제: ${ref.classItem.nextHomework}` : ""
+  ].filter(Boolean).join("\n");
+
+  const testItems = [];
+  if (regular.wordDays || regular.wordCount) {
+    testItems.push(`단어: ${regular.wordDays || "범위 미입력"} / ${regular.wordCount || "결과 미입력"}`);
+  }
+  if (wednesday.weeklyTest && wednesday.weeklyTest !== "미진행") {
+    testItems.push(`주간테스트: ${wednesday.weeklyTest}`);
+  }
+  if (wednesday.listenMode && wednesday.listenMode !== "미진행") {
+    const listeningScore = wednesday.listenCorrect || wednesday.listenTotal ? ` (${wednesday.listenCorrect || "-"} / ${wednesday.listenTotal || "-"})` : "";
+    testItems.push(`듣기: ${wednesday.listenLesson || "강 미입력"} ${wednesday.listenMode}${listeningScore}`);
+  }
+  examMatches.forEach(({ examClass, studentRecord }) => {
+    if (studentRecord.result) testItems.push(`${examClass.name} 내신 결과: ${studentRecord.result}`);
+  });
+
+  const memoItems = [
+    regular.memo,
+    wednesday.wednesdayMemo,
+    ...examMatches.map(({ studentRecord }) => studentRecord.memo)
+  ].filter(Boolean);
+
+  return [
+    `안녕하세요. TNC 영어학원입니다.`,
+    `${formatKoreanDate(dateKey)} ${ref.student.name} 학생 학습 안내드립니다.`,
+    "",
+    homeworkText || "과제 결과: 미기록",
+    "",
+    `테스트 결과:`,
+    testItems.length ? testItems.map((item) => `- ${item}`).join("\n") : "- 미기록",
+    memoItems.length ? ["", "비고:", ...memoItems.map((item) => `- ${item}`)].join("\n") : "",
+    notice ? ["", "추가 안내:", notice].join("\n") : "",
+    "",
+    "확인 부탁드립니다. 감사합니다."
+  ].filter((line) => line !== "").join("\n");
+}
+
+function generateParentMessage() {
+  const text = buildParentMessageText();
+  if (!text) {
+    showToast("학생을 먼저 선택해주세요.");
+    return;
+  }
+  parentMessagePreview.textContent = text;
+  showToast("학부모 발송문을 만들었습니다.");
+}
+
+function currentParentMessageText() {
+  return parentMessagePreview.textContent.trim();
+}
+
+async function copyParentMessage() {
+  const text = currentParentMessageText() || buildParentMessageText();
+  if (!text) return;
+  await navigator.clipboard.writeText(text);
+  parentMessagePreview.textContent = text;
+  showToast("학부모 발송문이 복사되었습니다.");
+}
+
+async function shareParentMessage() {
+  const text = currentParentMessageText() || buildParentMessageText();
+  if (!text) return;
+  parentMessagePreview.textContent = text;
+  if (navigator.share) {
+    await navigator.share({ title: "TNC 영어학원 학습 안내", text });
+    return;
+  }
+  await navigator.clipboard.writeText(text);
+  showToast("공유가 지원되지 않아 발송문을 복사했습니다.");
+}
+
 async function copyReport() {
   const text = currentReportText();
   if (!text) return;
@@ -2008,6 +2097,9 @@ document.querySelector("#saveBtn").addEventListener("click", () => saveState(tru
 document.querySelector("#addConsultBtn").addEventListener("click", addConsult);
 document.querySelector("#addExamYearBtn").addEventListener("click", addExamYear);
 document.querySelector("#addBookHistoryBtn").addEventListener("click", addBookHistory);
+document.querySelector("#generateParentMessageBtn").addEventListener("click", generateParentMessage);
+document.querySelector("#copyParentMessageBtn").addEventListener("click", copyParentMessage);
+document.querySelector("#shareParentMessageBtn").addEventListener("click", shareParentMessage);
 document.querySelector("#generateReportBtn").addEventListener("click", generateReport);
 document.querySelector("#copyReportBtn").addEventListener("click", copyReport);
 document.querySelector("#downloadReportImageBtn").addEventListener("click", downloadReportImage);
