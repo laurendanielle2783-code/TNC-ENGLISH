@@ -18,14 +18,22 @@
         </div>
 
         <nav class="nav-list" aria-label="주요 메뉴">
-          <button class="nav-item active" type="button" data-page="todayPage">정규 수업</button>
-          <button class="nav-item" type="button" data-page="wednesdayPage">수요일 개별</button>
+          <button class="nav-item active" type="button" data-page="divisionPage">홈</button>
+          <button class="nav-item" type="button" data-page="todayPage">정규 수업</button>
+          <button class="nav-item" type="button" data-page="wednesdayPage" data-middle-only="true">수요일 개별</button>
+          <button class="nav-item" type="button" data-page="examLessonPage">내신 수업</button>
           <button class="nav-item" type="button" data-page="calendarPage">달력 기록</button>
           <button class="nav-item" type="button" data-page="studentPage">학생별 관리</button>
           <button class="nav-item" type="button" data-page="inactivePage">휴/퇴원생 관리</button>
           <button class="nav-item" type="button" data-page="reportPage">AI 보고서</button>
           <button class="nav-item" type="button" data-page="classPage">반별 관리</button>
         </nav>
+
+        <div class="side-panel">
+          <span class="panel-label">현재 부서</span>
+          <strong id="divisionLabel">중등부</strong>
+          <p>홈에서 중등부와 고등부를 전환할 수 있습니다.</p>
+        </div>
 
         <div class="side-panel">
           <span class="panel-label">오늘 알림</span>
@@ -59,7 +67,29 @@
           </div>
         </header>
 
-        <section class="page active" id="todayPage">
+        <section class="page active" id="divisionPage">
+          <section class="division-landing">
+            <div>
+              <p class="eyebrow">TNC 영어학원</p>
+              <h2>관리할 부서를 선택하세요</h2>
+              <p>중등부는 기존 정규 수업, 수요일 개별, 내신 수업을 함께 관리하고 고등부는 정규 수업과 내신 수업 중심으로 관리합니다.</p>
+            </div>
+            <div class="division-actions">
+              <button class="division-card" type="button" data-select-division="middle">
+                <span>중등부</span>
+                <strong>기존 중등반 관리</strong>
+                <small>정규 수업 · 수요일 개별 · 내신 수업</small>
+              </button>
+              <button class="division-card" type="button" data-select-division="high">
+                <span>고등부</span>
+                <strong>고등반 관리</strong>
+                <small>정규 수업 · 내신 수업</small>
+              </button>
+            </div>
+          </section>
+        </section>
+
+        <section class="page" id="todayPage">
           <section class="main-panel">
             <div class="section-head compact">
               <div>
@@ -430,6 +460,32 @@
               </table>
             </div>
           </section>
+
+          <section class="main-panel">
+            <div class="section-head compact">
+              <div>
+                <p class="eyebrow">내신 수업 결과</p>
+                <h2>학교별 과제 / 학생 결과물</h2>
+              </div>
+            </div>
+            <div class="table-wrap">
+              <table class="calendar-result-table">
+                <thead>
+                  <tr>
+                    <th>학생</th>
+                    <th>내신반</th>
+                    <th>학교</th>
+                    <th>수업 요일</th>
+                    <th>오늘 과제</th>
+                    <th>다음 과제</th>
+                    <th>학생 결과물</th>
+                    <th>비고</th>
+                  </tr>
+                </thead>
+                <tbody id="calendarExamRows"></tbody>
+              </table>
+            </div>
+          </section>
         </section>
 
         <section class="page" id="studentPage">
@@ -785,36 +841,69 @@
           </section>
         </section>
 
-        <section class="page" id="classPage">
+        <section class="page" id="examLessonPage">
           <section class="main-panel">
             <div class="section-head">
               <div>
-                <p class="eyebrow">정규반 목록</p>
-                <h2>중등 / 고등 정규반</h2>
+                <p class="eyebrow" id="examDivisionEyebrow">중등부 내신</p>
+                <h2>학교별 내신 수업 관리</h2>
               </div>
               <div class="quick-actions">
-                <button type="button" id="addMiddleClassBtn">중등반 추가</button>
-                <button type="button" id="addHighClassBtn">고등반 추가</button>
+                <button type="button" id="addExamSchoolBtn">내신반 추가</button>
               </div>
             </div>
-            <div class="level-class-grid">
-              <article>
-                <div class="level-section-title">
-                  <strong>중등 정규반</strong>
-                  <span id="middleClassCount">0개 반</span>
-                </div>
-                <div class="class-list-stack" id="middleClassList"></div>
-              </article>
-              <article>
-                <div class="level-section-title">
-                  <strong>고등 정규반</strong>
-                  <span id="highClassCount">0개 반</span>
-                </div>
-                <div class="class-list-stack" id="highClassList"></div>
-              </article>
+            <div class="class-form">
+              <label>
+                기록 날짜
+                <input type="date" id="examLessonDateInput" />
+              </label>
+              <label>
+                내신반 선택
+                <select id="examClassFilter"></select>
+              </label>
+              <label>
+                수업 요일
+                <input type="text" id="examLessonDayInput" placeholder="월 / 화 / 수 / 목 / 금" />
+              </label>
+              <label>
+                오늘 과제
+                <input type="text" id="examTodayHomeworkInput" placeholder="오늘 진행한 과제" />
+              </label>
+              <label>
+                다음 과제
+                <input type="text" id="examNextHomeworkInput" placeholder="다음 시간까지 과제" />
+              </label>
             </div>
           </section>
 
+          <section class="main-panel">
+            <div class="section-head">
+              <div>
+                <p class="eyebrow">내신반 명단</p>
+                <h2 id="examClassTitle">학교별 학생 관리</h2>
+              </div>
+              <button class="primary-btn" type="button" id="addExamClassStudentBtn">학생 추가</button>
+            </div>
+            <div class="table-wrap">
+              <table class="exam-roster-table">
+                <thead>
+                  <tr>
+                    <th>이름</th>
+                    <th>학교</th>
+                    <th>학년</th>
+                    <th>기존 정규반</th>
+                    <th>학생 결과물</th>
+                    <th>비고</th>
+                    <th>삭제</th>
+                  </tr>
+                </thead>
+                <tbody id="examLessonRows"></tbody>
+              </table>
+            </div>
+          </section>
+        </section>
+
+        <section class="page" id="classPage">
           <section class="main-panel">
             <div class="section-head">
               <div>
@@ -901,26 +990,6 @@
               <tbody id="rosterRows"></tbody>
               </table>
             </div>
-          </section>
-
-          <section class="main-panel">
-            <div class="section-head compact">
-              <div>
-                <p class="eyebrow">시험 기간용</p>
-                <h2>중등 내신반 명단</h2>
-              </div>
-            </div>
-            <div class="exam-class-grid" id="middleExamClassList"></div>
-          </section>
-
-          <section class="main-panel">
-            <div class="section-head compact">
-              <div>
-                <p class="eyebrow">시험 기간용</p>
-                <h2>고등 내신반 명단</h2>
-              </div>
-            </div>
-            <div class="exam-class-grid" id="highExamClassList"></div>
           </section>
         </section>
       </main>

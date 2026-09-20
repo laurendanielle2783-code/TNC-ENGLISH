@@ -24,8 +24,10 @@ const defaultExamClasses = [
   { id: "exam-high-hyeonpung-1", name: "현풍고1", level: "high" }
 ];
 const pageTitles = {
+  divisionPage: "부서 선택",
   todayPage: "정규 수업 관리",
   wednesdayPage: "수요일 개별 관리",
+  examLessonPage: "내신 수업 관리",
   calendarPage: "달력 기록",
   studentPage: "학생별 관리",
   inactivePage: "휴/퇴원생 관리",
@@ -35,8 +37,10 @@ const pageTitles = {
 
 const defaultState = {
   activeClassId: "class-posan-2",
+  selectedDivision: "middle",
+  activeExamClassId: "exam-middle-yuga-1",
   selectedStudentId: "student-1",
-  activePage: "todayPage",
+  activePage: "divisionPage",
   selectedDate: new Date().toISOString().slice(0, 10),
   calendarMonth: new Date().toISOString().slice(0, 7),
   dailyRecords: {},
@@ -141,10 +145,13 @@ const studentPicker = document.querySelector("#studentPicker");
 const studentClassSelect = document.querySelector("#studentClassSelect");
 const inactiveRows = document.querySelector("#inactiveRows");
 const examRows = document.querySelector("#examRows");
-const middleClassList = document.querySelector("#middleClassList");
-const highClassList = document.querySelector("#highClassList");
-const middleExamClassList = document.querySelector("#middleExamClassList");
-const highExamClassList = document.querySelector("#highExamClassList");
+const calendarExamRows = document.querySelector("#calendarExamRows");
+const examClassFilter = document.querySelector("#examClassFilter");
+const examLessonRows = document.querySelector("#examLessonRows");
+const examLessonDateInput = document.querySelector("#examLessonDateInput");
+const examLessonDayInput = document.querySelector("#examLessonDayInput");
+const examTodayHomeworkInput = document.querySelector("#examTodayHomeworkInput");
+const examNextHomeworkInput = document.querySelector("#examNextHomeworkInput");
 const bookHistoryRows = document.querySelector("#bookHistoryRows");
 const recordDateInput = document.querySelector("#recordDateInput");
 const calendarGrid = document.querySelector("#calendarGrid");
@@ -333,6 +340,8 @@ function safeParse(text) {
 function normalizeState(raw) {
   const normalized = {
     activeClassId: raw.activeClassId || defaultState.activeClassId,
+    selectedDivision: raw.selectedDivision || "middle",
+    activeExamClassId: raw.activeExamClassId || defaultState.activeExamClassId,
     selectedStudentId: raw.selectedStudentId || defaultState.selectedStudentId,
     activePage: raw.activePage || "todayPage",
     selectedDate: raw.selectedDate || new Date().toISOString().slice(0, 10),
@@ -367,11 +376,15 @@ function normalizeState(raw) {
   }));
 
   if (!normalized.classes.some((classItem) => classItem.id === normalized.activeClassId)) {
-    normalized.activeClassId = normalized.classes[0].id;
+    normalized.activeClassId = divisionClasses(normalized.selectedDivision, normalized)[0]?.id || normalized.classes[0].id;
   }
 
   if (!findStudentById(normalized.selectedStudentId, normalized)) {
-    normalized.selectedStudentId = normalized.classes[0].students[0]?.id || "";
+    normalized.selectedStudentId = divisionClasses(normalized.selectedDivision, normalized)[0]?.students[0]?.id || normalized.classes[0].students[0]?.id || "";
+  }
+
+  if (!normalized.examClasses.some((examClass) => examClass.id === normalized.activeExamClassId)) {
+    normalized.activeExamClassId = normalized.examClasses.find((examClass) => examClass.level === normalized.selectedDivision)?.id || normalized.examClasses[0]?.id || "";
   }
 
   return normalized;
@@ -511,8 +524,21 @@ function saveLocalSnapshot() {
   }
 }
 
+function currentDivision() {
+  return state.selectedDivision || "middle";
+}
+
+function divisionLabel(division = currentDivision()) {
+  return division === "high" ? "고등부" : "중등부";
+}
+
+function divisionClasses(division = currentDivision(), fromState = state) {
+  return (fromState.classes || []).filter((classItem) => classLevel(classItem) === division);
+}
+
 function currentClass() {
-  return state.classes.find((classItem) => classItem.id === state.activeClassId) || state.classes[0];
+  const classes = divisionClasses();
+  return classes.find((classItem) => classItem.id === state.activeClassId) || classes[0] || state.classes[0];
 }
 
 function currentStudents() {
@@ -526,10 +552,11 @@ function selectedDate() {
 function currentDayRecord() {
   const dateKey = selectedDate();
   if (!state.dailyRecords[dateKey]) {
-    state.dailyRecords[dateKey] = { regular: {}, wednesday: {} };
+    state.dailyRecords[dateKey] = { regular: {}, wednesday: {}, exam: {} };
   }
   state.dailyRecords[dateKey].regular ||= {};
   state.dailyRecords[dateKey].wednesday ||= {};
+  state.dailyRecords[dateKey].exam ||= {};
   return state.dailyRecords[dateKey];
 }
 
@@ -564,6 +591,42 @@ function wednesdayRecordFor(student) {
   return day.wednesday[student.id];
 }
 
+function divisionExamClasses(division = currentDivision()) {
+  return (state.examClasses || []).filter((examClass) => examClass.level === division);
+}
+
+function activeExamClass() {
+  const classes = divisionExamClasses();
+  return classes.find((examClass) => examClass.id === state.activeExamClassId) || classes[0] || state.examClasses[0];
+}
+
+function examDayRecordFor(examClass = activeExamClass()) {
+  const day = currentDayRecord();
+  if (!examClass) return null;
+  if (!day.exam[examClass.id]) {
+    day.exam[examClass.id] = {
+      lessonDay: "",
+      todayHomework: "",
+      nextHomework: "",
+      studentResults: {}
+    };
+  }
+  day.exam[examClass.id].studentResults ||= {};
+  return day.exam[examClass.id];
+}
+
+function examStudentRecordFor(examClass, student) {
+  const examRecord = examDayRecordFor(examClass);
+  if (!examRecord || !student) return null;
+  if (!examRecord.studentResults[student.id]) {
+    examRecord.studentResults[student.id] = {
+      result: "",
+      memo: ""
+    };
+  }
+  return examRecord.studentResults[student.id];
+}
+
 function updateRegularRecord(studentId, field, value) {
   const ref = findStudentById(studentId);
   if (!ref) return;
@@ -584,8 +647,9 @@ function updateWednesdayRecord(studentId, field, value) {
   renderCalendarViews();
 }
 
-function allStudentRefs() {
-  return state.classes.flatMap((classItem) => classItem.students.map((student) => ({ classItem, student })));
+function allStudentRefs(includeAll = false) {
+  const sourceClasses = includeAll ? state.classes : divisionClasses();
+  return sourceClasses.flatMap((classItem) => classItem.students.map((student) => ({ classItem, student })));
 }
 
 function selectedStudentRef() {
@@ -618,7 +682,44 @@ function escapeHtml(value) {
     .replaceAll('"', "&quot;");
 }
 
+function ensureDivisionState() {
+  state.selectedDivision ||= "middle";
+
+  if (state.selectedDivision === "high" && !divisionClasses("high").length) {
+    const highClass = createClass("high");
+    highClass.students = [];
+    state.classes.push(highClass);
+  }
+
+  const classes = divisionClasses();
+  if (!classes.some((classItem) => classItem.id === state.activeClassId)) {
+    state.activeClassId = classes[0]?.id || state.classes[0]?.id || "";
+  }
+
+  const refs = allStudentRefs();
+  if (!findStudentById(state.selectedStudentId) || !refs.some(({ student }) => student.id === state.selectedStudentId)) {
+    state.selectedStudentId = refs[0]?.student.id || "";
+  }
+
+  const examClasses = divisionExamClasses();
+  if (!examClasses.some((examClass) => examClass.id === state.activeExamClassId)) {
+    state.activeExamClassId = examClasses[0]?.id || "";
+  }
+
+  if (state.selectedDivision === "high" && state.activePage === "wednesdayPage") {
+    state.activePage = "todayPage";
+  }
+}
+
+function renderDivisionUI() {
+  document.querySelector("#divisionLabel").textContent = divisionLabel();
+  document.querySelectorAll("[data-middle-only]").forEach((element) => {
+    element.hidden = currentDivision() === "high";
+  });
+}
+
 function render() {
+  ensureDivisionState();
   const classItem = currentClass();
   if (!classItem) return;
 
@@ -634,8 +735,8 @@ function render() {
   renderStudentDetail();
   renderClassFields(classItem);
   renderRoster(classItem);
-  renderLevelClassLists();
-  renderExamClassLists();
+  renderDivisionUI();
+  renderExamLessonPage();
   renderWednesdayRows();
   renderWednesdaySummary();
   renderDateControls();
@@ -655,7 +756,7 @@ function render() {
 }
 
 function renderClassOptions() {
-  classFilter.innerHTML = state.classes
+  classFilter.innerHTML = divisionClasses()
     .map((classItem) => `<option value="${classItem.id}" ${classItem.id === state.activeClassId ? "selected" : ""}>${escapeHtml(classItem.name)} ${escapeHtml(classItem.classDays)} ${escapeHtml(classItem.time)}</option>`)
     .join("");
 }
@@ -779,81 +880,49 @@ function renderRoster(classItem) {
     .join("");
 }
 
-function renderLevelClassLists() {
-  const middleClasses = state.classes.filter((classItem) => classLevel(classItem) !== "high");
-  const highClasses = state.classes.filter((classItem) => classLevel(classItem) === "high");
-
-  document.querySelector("#middleClassCount").textContent = `${middleClasses.length}개 반`;
-  document.querySelector("#highClassCount").textContent = `${highClasses.length}개 반`;
-  middleClassList.innerHTML = renderClassListItems(middleClasses, "아직 등록된 중등반이 없습니다.");
-  highClassList.innerHTML = renderClassListItems(highClasses, "아직 등록된 고등반이 없습니다.");
-}
-
-function renderClassListItems(classes, emptyMessage) {
-  if (!classes.length) {
-    return `<div class="empty-note">${emptyMessage}</div>`;
-  }
-
-  return classes
-    .map((classItem) => `
-      <button class="class-list-item ${classItem.id === state.activeClassId ? "active" : ""}" type="button" data-select-class="${classItem.id}">
-        <strong>${escapeHtml(classItem.name)}</strong>
-        <span>${escapeHtml(classItem.classDays || "요일 미입력")} · ${escapeHtml(classItem.time || "시간 미입력")} · ${classItem.students.length}명</span>
-      </button>
-    `)
-    .join("");
-}
-
 function classLevel(classItem) {
   const text = `${classItem.name || ""} ${classItem.level || ""} ${classItem.students?.map((student) => `${student.school || ""} ${student.grade || ""}`).join(" ") || ""}`;
   return /고등|고[1-3]|고\s*[1-3]|고$|고등부|비슬고|포산고|현풍고/.test(text) ? "high" : "middle";
 }
 
-function renderExamClassLists() {
-  const middleExamClasses = state.examClasses.filter((examClass) => examClass.level !== "high");
-  const highExamClasses = state.examClasses.filter((examClass) => examClass.level === "high");
-  middleExamClassList.innerHTML = middleExamClasses.map(renderExamClassCard).join("");
-  highExamClassList.innerHTML = highExamClasses.map(renderExamClassCard).join("");
-}
+function renderExamLessonPage() {
+  const examClasses = divisionExamClasses();
+  const examClass = activeExamClass();
+  const examRecord = examDayRecordFor(examClass);
 
-function renderExamClassCard(examClass) {
-  const students = examClass.students || [];
-  const rows = students.length
-    ? students.map((student) => `
-        <tr data-exam-class-id="${examClass.id}" data-exam-class-student-id="${student.id}">
-          <td><input data-exam-class-student-field="name" value="${escapeHtml(student.name)}" placeholder="학생 이름" /></td>
-          <td><input data-exam-class-student-field="school" value="${escapeHtml(student.school)}" placeholder="학교" /></td>
-          <td><input data-exam-class-student-field="grade" value="${escapeHtml(student.grade)}" placeholder="학년" /></td>
-          <td><input data-exam-class-student-field="regularClassName" value="${escapeHtml(student.regularClassName)}" placeholder="기존 정규반" /></td>
-          <td><input class="memo-input" data-exam-class-student-field="memo" value="${escapeHtml(student.memo)}" placeholder="내신 기간 메모" /></td>
-          <td><button class="small-danger" type="button" data-delete-exam-class-student="${student.id}">삭제</button></td>
-        </tr>
-      `).join("")
-    : `<tr><td colspan="6">학생 추가 버튼으로 내신반 명단을 기록할 수 있습니다.</td></tr>`;
+  document.querySelector("#examDivisionEyebrow").textContent = `${divisionLabel()} 내신`;
+  examLessonDateInput.value = selectedDate();
+  examClassFilter.innerHTML = examClasses
+    .map((item) => `<option value="${item.id}" ${item.id === state.activeExamClassId ? "selected" : ""}>${escapeHtml(item.name)}</option>`)
+    .join("");
+  examClassFilter.disabled = !examClasses.length;
 
-  return `
-    <article class="exam-class-card" data-exam-class-id="${examClass.id}">
-      <div class="exam-class-card-head">
-        <input class="exam-class-title-input" data-exam-class-field="name" value="${escapeHtml(examClass.name)}" />
-        <button class="outline-btn" type="button" data-add-exam-class-student="${examClass.id}">학생 추가</button>
-      </div>
-      <div class="table-wrap">
-        <table class="exam-roster-table">
-          <thead>
-            <tr>
-              <th>이름</th>
-              <th>학교</th>
-              <th>학년</th>
-              <th>기존 정규반</th>
-              <th>비고</th>
-              <th>삭제</th>
-            </tr>
-          </thead>
-          <tbody>${rows}</tbody>
-        </table>
-      </div>
-    </article>
-  `;
+  document.querySelector("#examClassTitle").textContent = examClass ? `${examClass.name} 학생 관리` : "학교별 학생 관리";
+  examLessonDayInput.value = examRecord?.lessonDay || "";
+  examTodayHomeworkInput.value = examRecord?.todayHomework || "";
+  examNextHomeworkInput.value = examRecord?.nextHomework || "";
+
+  if (!examClass) {
+    examLessonRows.innerHTML = `<tr><td colspan="7">내신반을 추가해주세요.</td></tr>`;
+    return;
+  }
+
+  examLessonRows.innerHTML = examClass.students?.length
+    ? examClass.students.map((student) => {
+        const studentRecord = examStudentRecordFor(examClass, student);
+        return `
+          <tr data-exam-class-student-id="${student.id}">
+            <td><input data-exam-student-field="name" value="${escapeHtml(student.name)}" placeholder="학생 이름" /></td>
+            <td><input data-exam-student-field="school" value="${escapeHtml(student.school)}" placeholder="학교" /></td>
+            <td><input data-exam-student-field="grade" value="${escapeHtml(student.grade)}" placeholder="학년" /></td>
+            <td><input data-exam-student-field="regularClassName" value="${escapeHtml(student.regularClassName)}" placeholder="기존 정규반" /></td>
+            <td><input class="memo-input" data-exam-result-field="result" value="${escapeHtml(studentRecord?.result)}" placeholder="제출 / 미제출 / 점수 / 결과물" /></td>
+            <td><input class="memo-input" data-exam-result-field="memo" value="${escapeHtml(studentRecord?.memo)}" placeholder="보완점, 특이사항" /></td>
+            <td><button class="small-danger" type="button" data-delete-exam-class-student="${student.id}">삭제</button></td>
+          </tr>
+        `;
+      }).join("")
+    : `<tr><td colspan="7">학생 추가 버튼으로 내신반 명단을 기록할 수 있습니다.</td></tr>`;
 }
 
 function renderWednesdayRows() {
@@ -918,7 +987,7 @@ function renderReportTools() {
   const classItem = currentClass();
   const students = classItem?.students || [];
 
-  reportClassFilter.innerHTML = state.classes
+  reportClassFilter.innerHTML = divisionClasses()
     .map((item) => `<option value="${item.id}" ${item.id === state.activeClassId ? "selected" : ""}>${escapeHtml(item.name)} ${escapeHtml(item.classDays || "")} ${escapeHtml(item.time || "")}</option>`)
     .join("");
 
@@ -1026,7 +1095,7 @@ function buildCustomPromptText() {
 function renderStudentClassSelectors() {
   const ref = selectedStudentRef();
   const selectedClassId = ref?.classItem.id || currentClass()?.id || "";
-  const classOptions = state.classes
+  const classOptions = divisionClasses()
     .map((classItem) => `<option value="${classItem.id}" ${classItem.id === selectedClassId ? "selected" : ""}>${escapeHtml(classItem.name)} ${escapeHtml(classItem.classDays)} ${escapeHtml(classItem.time)}</option>`)
     .join("");
 
@@ -1202,7 +1271,8 @@ function isWednesdayMissing(student) {
 function renderPage() {
   document.querySelectorAll(".page").forEach((page) => page.classList.toggle("active", page.id === state.activePage));
   document.querySelectorAll(".nav-item").forEach((button) => button.classList.toggle("active", button.dataset.page === state.activePage));
-  document.querySelector("#pageTitle").textContent = pageTitles[state.activePage] || "TNC 관리";
+  const title = pageTitles[state.activePage] || "TNC 관리";
+  document.querySelector("#pageTitle").textContent = state.activePage === "divisionPage" ? title : `${divisionLabel()} ${title}`;
 }
 
 function renderDateControls() {
@@ -1215,6 +1285,7 @@ function renderCalendarViews() {
   renderCalendarDaySummary();
   renderCalendarRegularRows();
   renderCalendarWednesdayRows();
+  renderCalendarExamRows();
 }
 
 function renderCalendarGrid() {
@@ -1239,12 +1310,13 @@ function renderCalendarGrid() {
     const record = state.dailyRecords[dateKey];
     const hasRegular = record?.regular && Object.keys(record.regular).length > 0;
     const hasWednesday = record?.wednesday && Object.keys(record.wednesday).length > 0;
+    const hasExam = record?.exam && Object.keys(record.exam).length > 0;
     const classes = ["calendar-day", dateKey === selected ? "selected" : "", dateKey === today ? "today" : ""].filter(Boolean).join(" ");
 
     cells += `
       <button class="${classes}" type="button" data-calendar-date="${dateKey}">
         <strong>${dayNumber}</strong>
-        <span>${hasRegular ? "정규" : ""}${hasWednesday ? " 수요" : ""}</span>
+        <span>${hasRegular ? "정규" : ""}${hasWednesday ? " 수요" : ""}${hasExam ? " 내신" : ""}</span>
       </button>
     `;
   }
@@ -1254,26 +1326,29 @@ function renderCalendarGrid() {
 }
 
 function renderCalendarDaySummary() {
-  const regularCount = allStudentRefs().filter(({ student }) => {
+  const regularCount = allStudentRefs(true).filter(({ student }) => {
     const record = currentDayRecord().regular[student.id];
     return record && (record.attendance || record.wordCount || record.homework);
   }).length;
-  const wednesdayCount = allStudentRefs().filter(({ student }) => {
+  const wednesdayCount = allStudentRefs(true).filter(({ student }) => {
     const record = currentDayRecord().wednesday[student.id];
     return record && (record.wednesdaySlot !== "미정" || record.weeklyTest !== "미진행" || record.makeup !== "미진행" || record.listenMode !== "미진행");
   }).length;
+
+  const examCount = examRecordRefsForDate(selectedDate()).length;
 
   document.querySelector("#calendarDaySummary").innerHTML = `
     <div class="calendar-summary-list">
       <div><span>정규 수업 기록</span><strong>${regularCount}명</strong></div>
       <div><span>수요일 개별 기록</span><strong>${wednesdayCount}명</strong></div>
+      <div><span>내신 수업 기록</span><strong>${examCount}명</strong></div>
       <div><span>선택 반</span><strong>${escapeHtml(currentClass()?.name || "미선택")}</strong></div>
     </div>
   `;
 }
 
 function renderCalendarRegularRows() {
-  calendarRegularRows.innerHTML = allStudentRefs()
+  calendarRegularRows.innerHTML = allStudentRefs(true)
     .map(({ classItem, student }) => {
       const record = currentDayRecord().regular[student.id];
       return `
@@ -1292,7 +1367,7 @@ function renderCalendarRegularRows() {
 }
 
 function renderCalendarWednesdayRows() {
-  calendarWednesdayRows.innerHTML = allStudentRefs()
+  calendarWednesdayRows.innerHTML = allStudentRefs(true)
     .map(({ classItem, student }) => {
       const record = currentDayRecord().wednesday[student.id];
       return `
@@ -1310,6 +1385,39 @@ function renderCalendarWednesdayRows() {
       `;
     })
     .join("");
+}
+
+function renderCalendarExamRows() {
+  const rows = examRecordRefsForDate(selectedDate());
+  calendarExamRows.innerHTML = rows.length
+    ? rows.map(({ examClass, student, examRecord, studentRecord }) => `
+        <tr>
+          <td><strong>${escapeHtml(student.name || "-")}</strong></td>
+          <td>${escapeHtml(examClass.name)}</td>
+          <td>${escapeHtml(student.school || "-")}</td>
+          <td>${escapeHtml(examRecord.lessonDay || "-")}</td>
+          <td>${escapeHtml(examRecord.todayHomework || "-")}</td>
+          <td>${escapeHtml(examRecord.nextHomework || "-")}</td>
+          <td>${escapeHtml(studentRecord.result || "-")}</td>
+          <td>${escapeHtml(studentRecord.memo || "-")}</td>
+        </tr>
+      `).join("")
+    : `<tr><td colspan="8">선택 날짜의 내신 수업 기록이 없습니다.</td></tr>`;
+}
+
+function examRecordRefsForDate(dateKey) {
+  const dayRecord = state.dailyRecords[dateKey];
+  const examRecords = dayRecord?.exam || {};
+  return Object.entries(examRecords).flatMap(([examClassId, examRecord]) => {
+    const examClass = state.examClasses.find((item) => item.id === examClassId);
+    if (!examClass) return [];
+    return (examClass.students || []).map((student) => ({
+      examClass,
+      student,
+      examRecord,
+      studentRecord: examRecord.studentResults?.[student.id] || {}
+    })).filter(({ studentRecord }) => studentRecord.result || studentRecord.memo || examRecord.lessonDay || examRecord.todayHomework || examRecord.nextHomework);
+  });
 }
 
 function formatKoreanDate(dateKey) {
@@ -1450,9 +1558,22 @@ function addExamClassStudent(examClassId) {
 
   examClass.students ||= [];
   examClass.students.push(createExamClassStudent());
-  renderExamClassLists();
+  renderExamLessonPage();
   saveState(false);
   showToast("내신반 학생 행이 추가되었습니다.");
+}
+
+function addExamSchoolClass() {
+  const examClass = createExamClass({
+    name: currentDivision() === "high" ? "새 고등 내신반" : "새 중등 내신반",
+    level: currentDivision(),
+    students: []
+  });
+  state.examClasses.push(examClass);
+  state.activeExamClassId = examClass.id;
+  renderExamLessonPage();
+  saveState(false);
+  showToast("내신반이 추가되었습니다.");
 }
 
 function updateExamClass(examClassId, field, value) {
@@ -1472,9 +1593,16 @@ function deleteExamClassStudent(examClassId, studentId) {
   const examClass = state.examClasses.find((item) => item.id === examClassId);
   if (!examClass) return;
   examClass.students = (examClass.students || []).filter((student) => student.id !== studentId);
-  renderExamClassLists();
+  renderExamLessonPage();
   saveState(false);
   showToast("내신반 명단에서 삭제되었습니다.");
+}
+
+function updateExamLessonField(field, value) {
+  const examRecord = examDayRecordFor(activeExamClass());
+  if (!examRecord) return;
+  examRecord[field] = value;
+  renderCalendarViews();
 }
 
 function deleteStudent(studentId) {
@@ -1814,13 +1942,25 @@ studentClassSelect.addEventListener("change", (event) => {
 
 document.querySelectorAll(".nav-item").forEach((button) => {
   button.addEventListener("click", () => {
+    if (button.hidden) return;
     state.activePage = button.dataset.page;
     render();
   });
 });
 
+document.querySelectorAll("[data-select-division]").forEach((button) => {
+  button.addEventListener("click", () => {
+    state.selectedDivision = button.dataset.selectDivision;
+    state.activePage = "todayPage";
+    ensureDivisionState();
+    render();
+    saveState(false);
+    showToast(`${divisionLabel()} 화면으로 이동했습니다.`);
+  });
+});
+
 document.querySelector("#addClassBtn").addEventListener("click", () => {
-  const newClass = createClass();
+  const newClass = createClass(currentDivision());
   state.classes.push(newClass);
   state.activeClassId = newClass.id;
   state.selectedStudentId = newClass.students[0].id;
@@ -1829,18 +1969,16 @@ document.querySelector("#addClassBtn").addEventListener("click", () => {
   saveState(false);
   showToast("반이 추가되었습니다.");
 });
-document.querySelector("#addMiddleClassBtn").addEventListener("click", () => addClassByLevel("middle"));
-document.querySelector("#addHighClassBtn").addEventListener("click", () => addClassByLevel("high"));
 
 document.querySelector("#deleteClassBtn").addEventListener("click", () => {
-  if (state.classes.length <= 1) {
+  if (divisionClasses().length <= 1) {
     showToast("마지막 반은 삭제할 수 없습니다.");
     return;
   }
 
   state.classes = state.classes.filter((classItem) => classItem.id !== state.activeClassId);
-  state.activeClassId = state.classes[0].id;
-  state.selectedStudentId = state.classes[0].students[0]?.id || "";
+  state.activeClassId = divisionClasses()[0]?.id || state.classes[0]?.id || "";
+  state.selectedStudentId = currentClass()?.students[0]?.id || "";
   render();
   saveState(false);
   showToast("반이 삭제되었습니다.");
@@ -2015,60 +2153,53 @@ rosterRows.addEventListener("change", (event) => {
   render();
 });
 
-document.querySelector("#classPage").addEventListener("click", (event) => {
-  const classButton = event.target.closest("[data-select-class]");
-  if (classButton) {
-    state.activeClassId = classButton.dataset.selectClass;
-    state.selectedStudentId = currentClass().students[0]?.id || "";
-    render();
-    saveState(false);
-    return;
-  }
+document.querySelector("#addExamSchoolBtn").addEventListener("click", addExamSchoolClass);
+document.querySelector("#addExamClassStudentBtn").addEventListener("click", () => addExamClassStudent(state.activeExamClassId));
 
-  const addExamStudentButton = event.target.closest("[data-add-exam-class-student]");
-  if (addExamStudentButton) {
-    addExamClassStudent(addExamStudentButton.dataset.addExamClassStudent);
-    return;
-  }
-
-  const deleteExamStudentButton = event.target.closest("[data-delete-exam-class-student]");
-  if (deleteExamStudentButton) {
-    const card = deleteExamStudentButton.closest("[data-exam-class-id]");
-    deleteExamClassStudent(card.dataset.examClassId, deleteExamStudentButton.dataset.deleteExamClassStudent);
-  }
-});
-
-document.querySelector("#classPage").addEventListener("input", (event) => {
-  const target = event.target;
-  const examCard = target.closest("[data-exam-class-id]");
-  if (!examCard) return;
-
-  if (target.dataset.examClassField) {
-    updateExamClass(examCard.dataset.examClassId, target.dataset.examClassField, target.value);
-    return;
-  }
-
-  if (target.dataset.examClassStudentField) {
-    const row = target.closest("[data-exam-class-student-id]");
-    updateExamClassStudent(examCard.dataset.examClassId, row.dataset.examClassStudentId, target.dataset.examClassStudentField, target.value);
-  }
-});
-
-document.querySelector("#classPage").addEventListener("change", (event) => {
-  const target = event.target;
-  const examCard = target.closest("[data-exam-class-id]");
-  if (!examCard) return;
-
-  if (target.dataset.examClassField) {
-    updateExamClass(examCard.dataset.examClassId, target.dataset.examClassField, target.value);
-  }
-
-  if (target.dataset.examClassStudentField) {
-    const row = target.closest("[data-exam-class-student-id]");
-    updateExamClassStudent(examCard.dataset.examClassId, row.dataset.examClassStudentId, target.dataset.examClassStudentField, target.value);
-  }
-
+examClassFilter.addEventListener("change", (event) => {
+  state.activeExamClassId = event.target.value;
+  renderExamLessonPage();
   saveState(false);
+});
+
+examLessonDateInput.addEventListener("change", (event) => {
+  if (!event.target.value) return;
+  selectRecordDate(event.target.value);
+  state.activePage = "examLessonPage";
+  render();
+});
+
+examLessonDayInput.addEventListener("input", (event) => updateExamLessonField("lessonDay", event.target.value));
+examTodayHomeworkInput.addEventListener("input", (event) => updateExamLessonField("todayHomework", event.target.value));
+examNextHomeworkInput.addEventListener("input", (event) => updateExamLessonField("nextHomework", event.target.value));
+
+document.querySelector("#examLessonPage").addEventListener("input", (event) => {
+  const target = event.target;
+  const row = target.closest("[data-exam-class-student-id]");
+  const examClass = activeExamClass();
+  if (!row || !examClass) return;
+
+  if (target.dataset.examStudentField) {
+    updateExamClassStudent(examClass.id, row.dataset.examClassStudentId, target.dataset.examStudentField, target.value);
+    return;
+  }
+
+  if (target.dataset.examResultField) {
+    const student = examClass.students.find((item) => item.id === row.dataset.examClassStudentId);
+    const studentRecord = examStudentRecordFor(examClass, student);
+    if (studentRecord) studentRecord[target.dataset.examResultField] = target.value;
+    renderCalendarViews();
+  }
+});
+
+document.querySelector("#examLessonPage").addEventListener("change", () => {
+  saveState(false);
+});
+
+document.querySelector("#examLessonPage").addEventListener("click", (event) => {
+  const deleteButton = event.target.closest("[data-delete-exam-class-student]");
+  if (!deleteButton) return;
+  deleteExamClassStudent(state.activeExamClassId, deleteButton.dataset.deleteExamClassStudent);
 });
 
 document.querySelector("#detailForm").addEventListener("input", (event) => {

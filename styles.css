@@ -289,6 +289,68 @@ td .outline-btn {
   display: grid;
 }
 
+.division-landing {
+  display: grid;
+  gap: 28px;
+  min-height: calc(100vh - 170px);
+  align-content: center;
+  padding: 48px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--surface);
+  box-shadow: var(--shadow);
+}
+
+.division-landing h2 {
+  margin: 8px 0 12px;
+  font-size: clamp(32px, 4vw, 54px);
+}
+
+.division-landing p {
+  max-width: 760px;
+  color: var(--muted);
+  line-height: 1.7;
+}
+
+.division-actions {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 18px;
+}
+
+.division-card {
+  display: grid;
+  gap: 10px;
+  min-height: 180px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 24px;
+  background: #fbfaf6;
+  color: var(--ink);
+  text-align: left;
+}
+
+.division-card:hover {
+  border-color: var(--red);
+  background: var(--soft-red);
+}
+
+.division-card span {
+  color: var(--red);
+  font-size: 14px;
+  font-weight: 900;
+}
+
+.division-card strong {
+  font-size: 28px;
+}
+
+.division-card small {
+  color: var(--muted);
+  font-size: 14px;
+  font-weight: 800;
+}
+
 .class-hero {
   display: flex;
   align-items: center;
@@ -941,6 +1003,7 @@ td select {
 
   .workspace-grid,
   .bottom-grid,
+  .division-actions,
   .level-class-grid,
   .exam-class-grid,
   .class-form {
