@@ -2,7 +2,7 @@ const TABLE_NAME = "app_state";
 const RECORD_ID = "tnc-main";
 
 module.exports = async function handler(request, response) {
-  if (!process.env.SUPABASE_URL || !process.env.SUPABASE_SERVICE_ROLE_KEY) {
+  if (!process.env.SUPABASE_URL || !supabaseApiKey()) {
     response.status(503).json({ error: "데이터베이스 설정이 필요합니다." });
     return;
   }
@@ -70,12 +70,20 @@ function tableUrl() {
 }
 
 function supabaseFetch(url, options) {
+  const apiKey = supabaseApiKey();
   const headers = {
-    apikey: process.env.SUPABASE_SERVICE_ROLE_KEY,
-    Authorization: `Bearer ${process.env.SUPABASE_SERVICE_ROLE_KEY}`,
+    apikey: apiKey,
     "Content-Type": "application/json",
     ...(options.headers || {})
   };
 
+  if (apiKey && !apiKey.startsWith("sb_")) {
+    headers.Authorization = `Bearer ${apiKey}`;
+  }
+
   return fetch(url, { ...options, headers });
+}
+
+function supabaseApiKey() {
+  return process.env.SUPABASE_SECRET_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_API_KEY;
 }
