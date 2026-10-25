@@ -138,6 +138,8 @@ const defaultState = {
 const CLOUD_BASELINE_KEY = `${STORAGE_KEY}-cloud-baseline`;
 const hadLocalDataAtStartup = Boolean(localStorage.getItem(STORAGE_KEY));
 let state = loadState();
+// Open the department selection home on every new page visit.
+state.activePage = "divisionPage";
 
 const classFilter = document.querySelector("#classFilter");
 const studentRows = document.querySelector("#studentRows");
@@ -448,8 +450,13 @@ function sharedDataFingerprint(value) {
 }
 
 function acceptCloudState(cloudState) {
+  const activePage = state.activePage;
+  const selectedDivision = state.selectedDivision;
   saveLocalSnapshot();
   state = cloudState;
+  // Loading shared data must not navigate away from the current screen.
+  state.activePage = activePage;
+  state.selectedDivision = selectedDivision;
   localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
   localStorage.setItem(CLOUD_BASELINE_KEY, sharedDataFingerprint(state));
   document.querySelector("#cloudRecoveryNotice")?.remove();
