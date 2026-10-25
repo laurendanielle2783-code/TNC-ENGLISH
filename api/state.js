@@ -2,6 +2,16 @@ const TABLE_NAME = "app_state";
 const RECORD_ID = "tnc-main";
 
 module.exports = async function handler(request, response) {
+  response.setHeader("Cache-Control", "no-store");
+  try {
+    await handleRequest(request, response);
+  } catch (error) {
+    console.error("Shared state request failed:", error?.cause?.code || error?.name || "unknown");
+    response.status(503).json({ error: "공용 저장 서버에 연결하지 못했습니다. 잠시 후 다시 시도해주세요." });
+  }
+};
+
+async function handleRequest(request, response) {
   if (!process.env.SUPABASE_URL || !supabaseApiKey()) {
     response.status(503).json({ error: "데이터베이스 설정이 필요합니다." });
     return;
@@ -41,7 +51,7 @@ async function readState(response) {
 
 async function writeState(request, response) {
   const body = typeof request.body === "string" ? JSON.parse(request.body) : request.body;
-  if (!body || typeof body.data !== "object") {
+  if (!body || !body.data || typeof body.data !== "object" || Array.isArray(body.data)) {
     response.status(400).json({ error: "저장할 데이터가 없습니다." });
     return;
   }

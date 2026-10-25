@@ -1062,3 +1062,50 @@ td select {
     grid-template-columns: 1fr;
   }
 }
+
+/* High school workspace */
+[hidden] { display: none !important; }
+.high-workspace { gap: 22px; }
+.hs-intro { display:flex; justify-content:space-between; align-items:center; padding:26px 30px; border-radius:18px; background:#1e332d; color:white; }
+.hs-intro h2 { margin:4px 0 10px; font-size:28px; }
+.hs-intro p { margin:0; line-height:1.7; }
+.hs-intro .eyebrow { color:#bdd7c9; letter-spacing:2px; }
+.hs-count { font-size:42px; font-weight:800; text-align:center; min-width:100px; }
+.hs-count small { display:block; font-size:13px; font-weight:400; }
+.hs-tabs,.hs-subtabs { display:flex; gap:8px; flex-wrap:wrap; }
+.hs-tabs { padding:6px; background:#e9ebe5; border-radius:12px; }
+.hs-tabs button { flex:1; background:transparent; border:0; padding:15px 24px; border-radius:9px; font-weight:700; }
+.hs-tabs button.active { background:white; color:#254d3b; box-shadow:0 3px 10px #0000000a; }
+.hs-subtabs { border-bottom:1px solid var(--line); padding-bottom:14px; margin-bottom:20px; }
+.hs-subtabs button { padding:10px 18px; background:white; border:1px solid var(--line); border-radius:8px; }
+.hs-subtabs button.active { color:white; background:#284d3b; border-color:#284d3b; }
+.hs-panel { padding:24px; margin-bottom:20px; min-width:0; }
+.hs-panel .section-head { gap:14px; flex-wrap:wrap; }
+.hs-panel h3 { margin:0; font-size:20px; }
+.hs-panel label,.hs-student-sidebar label { display:grid; gap:8px; color:var(--muted); font-size:13px; }
+.hs-panel input,.hs-panel select,.hs-panel textarea,.hs-student-sidebar input { width:100%; min-width:90px; padding:10px; border:1px solid var(--line); border-radius:7px; background:white; color:var(--ink); }
+.hs-panel button:not(.primary-btn):not(.small-danger):not(.hs-student-link) { padding:10px 14px; border:1px solid var(--line); border-radius:7px; }
+.hs-group-form { margin:12px 0 24px; }
+.hs-student-link { border:0; background:transparent; color:#24563d; font-weight:700; text-decoration:underline; padding:8px 0; }
+.hs-add-form { background:#f0f5ed; padding:20px; border-radius:12px; margin:20px 0; }
+.hs-add-form button { margin-top:14px; }
+.hs-student-layout { display:grid; grid-template-columns:240px minmax(0,1fr); gap:22px; align-items:start; }
+.hs-student-sidebar { padding:20px; position:sticky; top:20px; }
+.hs-student-list { display:grid; gap:7px; max-height:70vh; overflow:auto; }
+.hs-student-list button { padding:13px; background:white; border:1px solid var(--line); border-radius:9px; text-align:left; }
+.hs-student-list button.active { border-color:#284d3b; background:#edf5eb; }
+.hs-student-list small { display:block; margin-top:7px; color:var(--muted); line-height:1.5; }
+.hs-student-content { min-width:0; }
+.hs-mock-year { margin-top:20px; border-top:1px solid var(--line); padding-top:16px; }
+.hs-mock-year .class-form { grid-template-columns:repeat(2,minmax(0,1fr)); margin-bottom:16px; }
+.hs-help,.hs-empty { color:var(--muted); line-height:1.7; padding:12px 0; }
+.hs-detail-head { margin-top:28px; }
+.hs-attendance { min-width:2200px; }
+.hs-attendance caption { text-align:left; padding:10px 0; font-weight:700; }
+.hs-attendance th:first-child { position:sticky; left:0; z-index:1; background:#f4f5ef; min-width:100px; }
+.hs-attendance th small { display:block; font-weight:400; margin-top:5px; }
+.hs-attendance select { min-width:58px; padding:8px 2px; font-size:12px; }
+.high-school-mode .side-panel:last-of-type { display:none; }
+@media(max-width:1000px) { .hs-student-layout { grid-template-columns:1fr; } .hs-student-sidebar { position:static; } .hs-student-list { max-height:230px; grid-template-columns:repeat(auto-fill,minmax(150px,1fr)); } }
+@media(max-width:600px) { .hs-panel { padding:15px; } .hs-intro { padding:20px; } .hs-intro h2 { font-size:23px; } .hs-count { font-size:32px; } .hs-tabs button { padding:12px; } }
+@media print { body.high-school-mode * { visibility:hidden; } body.high-school-mode .hs-attendance-wrap, body.high-school-mode .hs-attendance-wrap * { visibility:visible; } body.high-school-mode .hs-attendance-wrap { position:absolute;left:0;top:0;width:100%;overflow:visible; } body.high-school-mode .hs-attendance { min-width:0;width:100%;font-size:8px;table-layout:fixed; } body.high-school-mode .hs-attendance th:first-child { min-width:0;position:static;width:60px; } body.high-school-mode .hs-attendance select { appearance:none;min-width:0;width:100%;padding:0;border:0;font-size:7px; } }

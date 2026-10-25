@@ -135,6 +135,8 @@ const defaultState = {
   ]
 };
 
+const CLOUD_BASELINE_KEY = `${STORAGE_KEY}-cloud-baseline`;
+const hadLocalDataAtStartup = Boolean(localStorage.getItem(STORAGE_KEY));
 let state = loadState();
 
 const classFilter = document.querySelector("#classFilter");
@@ -349,6 +351,7 @@ function normalizeState(raw) {
     selectedDate: raw.selectedDate || new Date().toISOString().slice(0, 10),
     calendarMonth: raw.calendarMonth || (raw.selectedDate || new Date().toISOString().slice(0, 10)).slice(0, 7),
     dailyRecords: raw.dailyRecords && typeof raw.dailyRecords === "object" ? raw.dailyRecords : {},
+    hiddenHighExamClassIds: Array.isArray(raw.hiddenHighExamClassIds) ? raw.hiddenHighExamClassIds : [],
     inactiveStudents: Array.isArray(raw.inactiveStudents) ? raw.inactiveStudents.map((student) => createStudent(student)) : [],
     examClasses: normalizeExamClasses(raw.examClasses),
     reportPromptProfile: raw.reportPromptProfile && typeof raw.reportPromptProfile === "object"
@@ -369,6 +372,7 @@ function normalizeState(raw) {
     readingDay: classItem.readingDay || inferReadingDay(classItem.classDays),
     teacher: classItem.teacher || "",
     book: classItem.book || "",
+    bookHistory: Array.isArray(classItem.bookHistory) ? classItem.bookHistory : [],
     level: classItem.level || "",
     grammarProgress: classItem.grammarProgress || classItem.todayProgress || "",
     readingProgress: classItem.readingProgress || "",
@@ -438,62 +442,99 @@ function saveState(showSaved = true, syncCloud = false) {
   if (showSaved) showToast("저장되었습니다.");
 }
 
+function sharedDataFingerprint(value) {
+  const { classes, examClasses, inactiveStudents, dailyRecords, reportPromptProfile, hiddenHighExamClassIds } = value;
+  return JSON.stringify({ classes, examClasses, inactiveStudents, dailyRecords, reportPromptProfile, hiddenHighExamClassIds });
+}
+
+function acceptCloudState(cloudState) {
+  saveLocalSnapshot();
+  state = cloudState;
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+  localStorage.setItem(CLOUD_BASELINE_KEY, sharedDataFingerprint(state));
+  document.querySelector("#cloudRecoveryNotice")?.remove();
+  render();
+  setCloudStatus("공용 저장 연결됨");
+  showToast("공용 저장 데이터를 불러왔습니다.");
+}
+
+function showCloudRecoveryNotice(cloudState) {
+  document.querySelector("#cloudRecoveryNotice")?.remove();
+  const notice = document.createElement("div");
+  notice.id = "cloudRecoveryNotice";
+  notice.setAttribute("role", "status");
+  notice.style.cssText = "position:sticky;top:0;z-index:1000;padding:16px;background:#fff3cd;color:#332b00;border:2px solid #e6b800;display:flex;gap:12px;align-items:center;flex-wrap:wrap";
+  const message = document.createElement("span");
+  message.textContent = "이 브라우저의 명단과 공용 명단이 다릅니다. 수정한 명단이 여기에 있다면 상단 저장을 눌러 공용으로 저장하세요. 다른 사람이 저장한 명단을 보려면 아래 버튼을 누르세요.";
+  const button = document.createElement("button");
+  button.type = "button";
+  button.className = "primary-btn";
+  button.textContent = "공용 명단 불러오기";
+  button.addEventListener("click", () => {
+    if (window.confirm("현재 브라우저 명단은 자동 백업한 뒤 공용 명단을 불러옵니다. 계속할까요?")) {
+      acceptCloudState(cloudState);
+    }
+  });
+  notice.append(message, button);
+  document.body.prepend(notice);
+  setCloudStatus("명단 선택 필요");
+}
+
 async function loadCloudState() {
   if (isCloudLoading) return;
   isCloudLoading = true;
+  const beforeLoad = sharedDataFingerprint(state);
   setCloudStatus("공용 저장 확인 중");
-
   try {
-    const response = await fetch("/api/state");
-    if (response.status === 503) {
-      setCloudStatus("개인 저장");
-      return;
-    }
-
+    const response = await fetch("/api/state", { cache: "no-store" });
     const result = await response.json();
     if (!response.ok) throw new Error(result.error || "load failed");
-
     if (result.data) {
       const cloudState = normalizeState(result.data);
-      if (stateDataScore(cloudState) > stateDataScore(state)) {
-        saveLocalSnapshot();
-        state = cloudState;
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
-        render();
-        setCloudStatus("공용 저장 연결됨");
-        showToast("공용 저장 데이터를 불러왔습니다.");
+      const current = sharedDataFingerprint(state);
+      const baseline = localStorage.getItem(CLOUD_BASELINE_KEY);
+      const hasUnsavedLocalData = (hadLocalDataAtStartup && current !== baseline) || current !== beforeLoad;
+      if (hasUnsavedLocalData && current !== sharedDataFingerprint(cloudState)) {
+        showCloudRecoveryNotice(cloudState);
       } else {
-        setCloudStatus("개인 데이터 보호 중");
-        showToast("현재 브라우저 데이터가 더 많아 자동 덮어쓰기를 막았습니다.");
+        acceptCloudState(cloudState);
       }
       return;
     }
-
     setCloudStatus("공용 저장 준비됨");
   } catch {
-    setCloudStatus("개인 저장");
+    setCloudStatus("공용 연결 실패 · 이 기기에만 저장");
+    showToast("공용 데이터를 불러오지 못했습니다. 이 브라우저의 데이터는 유지됩니다.");
   } finally {
     isCloudLoading = false;
   }
 }
 
 async function saveCloudState() {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+  const saveButton = document.querySelector("#saveBtn");
+  if (saveButton.disabled || isCloudLoading) return;
+  const payload = JSON.stringify(state);
+  const fingerprint = sharedDataFingerprint(state);
+  localStorage.setItem(STORAGE_KEY, payload);
+  saveButton.disabled = true;
   setCloudStatus("공용 저장 중");
-
   try {
     const response = await fetch("/api/state", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ data: state })
+      body: JSON.stringify({ data: JSON.parse(payload) })
     });
     const result = await response.json().catch(() => ({}));
-    if (!response.ok) throw new Error(result.error || "save failed");
+    if (!response.ok || !result.ok) throw new Error(result.error || "save failed");
+    localStorage.setItem(CLOUD_BASELINE_KEY, fingerprint);
+    document.querySelector("#cloudRecoveryNotice")?.remove();
     setCloudStatus("공용 저장 완료");
-    showToast("공용 데이터베이스에 저장되었습니다.");
+    showToast("공용 데이터베이스에 저장되었습니다. 다른 기기에서 새로고침하면 확인할 수 있습니다.");
   } catch {
-    setCloudStatus("개인 저장");
-    showToast("개인 브라우저에 저장되었습니다. Supabase 설정을 확인해주세요.");
+    setCloudStatus("공용 저장 실패 · 이 기기에만 저장");
+    showToast("공용 저장에 실패했습니다. 이 브라우저에는 보관되어 있으니 잠시 후 저장을 다시 눌러주세요.");
+  } finally {
+    saveButton.disabled = false;
   }
 }
 
@@ -2430,6 +2471,7 @@ inactiveRows.addEventListener("click", (event) => {
   if (deleteButton) deleteInactiveStudent(deleteButton.dataset.deleteInactive);
 });
 
+if (typeof installHighSchoolManagement === "function") installHighSchoolManagement();
 setTodayText();
 render();
 loadCloudState();
